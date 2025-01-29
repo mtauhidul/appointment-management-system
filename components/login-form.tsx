@@ -11,6 +11,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function LoginForm({
@@ -19,6 +21,7 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const router = useRouter();
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -29,6 +32,9 @@ export function LoginForm({
     // Clear form fields
     setEmail("");
     setPassword("");
+
+    // Redirect to dashboard - This is dummy code, so will be updated later
+    router.push("/dashboard");
   };
 
   return (
@@ -80,9 +86,12 @@ export function LoginForm({
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">
-              <a href="/home" className="underline underline-offset-4">
+              {/* <a href="/" className="underline underline-offset-4">
                 Back to home
-              </a>
+              </a> */}
+              <Link href="/" passHref className="underline underline-offset-4">
+                Back to home
+              </Link>
             </div>
           </form>
         </CardContent>

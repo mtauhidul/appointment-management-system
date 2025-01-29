@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "YTFC",
-  description: "YTFC - Patient Portal",
+  title: "YTFCS",
+  description: "YTFCS - Patient Portal",
 };
 
 export default function RootLayout({
