@@ -2,20 +2,19 @@
 
 import {
   AudioWaveform,
-  BookOpen,
-  Bot,
+  CalendarDays,
+  ClipboardPlus,
   Command,
   Frame,
   GalleryVerticalEnd,
+  LayoutDashboard,
   Map,
   PieChart,
-  Settings2,
-  SquareTerminal,
+  SquareUser,
 } from "lucide-react";
 import * as React from "react";
 
 import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
 import {
@@ -29,9 +28,9 @@ import {
 // This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "John Smith",
+    email: "john.smith@mail.com",
+    avatar: "/assets/images/avatar.svg",
   },
   teams: [
     {
@@ -52,9 +51,9 @@ const data = {
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Dashboard",
       url: "#",
-      icon: SquareTerminal,
+      icon: LayoutDashboard,
       isActive: true,
       items: [
         {
@@ -72,9 +71,9 @@ const data = {
       ],
     },
     {
-      title: "Models",
+      title: "Reports",
       url: "#",
-      icon: Bot,
+      icon: ClipboardPlus,
       items: [
         {
           title: "Genesis",
@@ -91,9 +90,9 @@ const data = {
       ],
     },
     {
-      title: "Documentation",
+      title: "Appointments",
       url: "#",
-      icon: BookOpen,
+      icon: CalendarDays,
       items: [
         {
           title: "Introduction",
@@ -114,9 +113,9 @@ const data = {
       ],
     },
     {
-      title: "Settings",
+      title: "Profile",
       url: "#",
-      icon: Settings2,
+      icon: SquareUser,
       items: [
         {
           title: "General",
@@ -164,7 +163,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
