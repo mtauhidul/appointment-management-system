@@ -13,6 +13,8 @@ import {
 
 export function NavMain({
   items,
+  onSectionChange,
+  section,
 }: {
   items: {
     title: string;
@@ -24,6 +26,8 @@ export function NavMain({
       url: string;
     }[];
   }[];
+  onSectionChange: (title: string) => void;
+  section: string;
 }) {
   return (
     <SidebarGroup>
@@ -38,7 +42,11 @@ export function NavMain({
           >
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
-                <SidebarMenuButton tooltip={item.title}>
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  onClick={() => onSectionChange(item.title)}
+                  isActive={section === item.title}
+                >
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
                   <ChevronRight className="ml-auto" />

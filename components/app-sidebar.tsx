@@ -12,7 +12,6 @@ import {
   PieChart,
   SquareUser,
 } from "lucide-react";
-import * as React from "react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -155,14 +154,21 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar(props: {
+  section: string;
+  onSectionChange: (section: string) => void;
+}) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain
+          items={data.navMain}
+          onSectionChange={props.onSectionChange}
+          section={props.section}
+        />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

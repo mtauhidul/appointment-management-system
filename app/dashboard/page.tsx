@@ -1,4 +1,9 @@
+"use client";
 import { AppSidebar } from "@/components/app-sidebar";
+import Appointments from "@/components/appointments/appointments";
+import Dashboard from "@/components/dashboard/dashboard";
+import Profile from "@/components/profile/profile";
+import Reports from "@/components/reports/reports";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,11 +18,17 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import React from "react";
 
 export default function Page() {
+  const [section, setSection] = React.useState("Dashboard");
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar
+        onSectionChange={(section: string) => setSection(section)}
+        section={section}
+      />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
@@ -26,26 +37,25 @@ export default function Page() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Building Your Application
+                  <BreadcrumbLink
+                    onClick={() => setSection("Dashboard")}
+                    className="cursor-pointer"
+                  >
+                    Dashboard
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
+                  <BreadcrumbPage>{section}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
-          </div>
-          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
-        </div>
+        {section === "Dashboard" ? <Dashboard /> : null}
+        {section === "Reports" ? <Reports /> : null}
+        {section === "Appointments" ? <Appointments /> : null}
+        {section === "Profile" ? <Profile /> : null}
       </SidebarInset>
     </SidebarProvider>
   );
