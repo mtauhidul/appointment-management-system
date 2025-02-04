@@ -11,21 +11,18 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
+interface NavItem {
+  title: string;
+  icon: LucideIcon;
+  isActive?: boolean;
+}
+
 export function NavMain({
   items,
   onSectionChange,
   section,
 }: {
-  items: {
-    title: string;
-    url: string;
-    icon?: LucideIcon;
-    isActive?: boolean;
-    items?: {
-      title: string;
-      url: string;
-    }[];
-  }[];
+  items: NavItem[];
   onSectionChange: (title: string) => void;
   section: string;
 }) {

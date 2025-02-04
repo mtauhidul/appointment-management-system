@@ -1,18 +1,5 @@
 "use client";
 
-import {
-  AudioWaveform,
-  CalendarDays,
-  ClipboardPlus,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  LayoutDashboard,
-  Map,
-  PieChart,
-  SquareUser,
-} from "lucide-react";
-
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
@@ -23,151 +10,69 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { GalleryVerticalEnd, LucideIcon } from "lucide-react";
 
 // This is sample data.
-const data = {
+
+interface User {
+  name: string;
+  email: string;
+  avatar: string;
+}
+
+interface Company {
+  name: string;
+  logo: React.ComponentType;
+  plan: string;
+}
+
+interface Data {
+  user: User;
+  company: Company[];
+}
+
+const data: Data = {
   user: {
     name: "John Smith",
     email: "john.smith@mail.com",
     avatar: "/assets/images/avatar.svg",
   },
-  teams: [
+  company: [
     {
-      name: "YTFCS Inc.",
+      name: "YTFCS",
       logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "YTFCS Labs",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "YTFCS Open Source",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "#",
-      icon: LayoutDashboard,
-      isActive: true,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Reports",
-      url: "#",
-      icon: ClipboardPlus,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Appointments",
-      url: "#",
-      icon: CalendarDays,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Profile",
-      url: "#",
-      icon: SquareUser,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
+      plan: "Katy, TX",
     },
   ],
 };
 
-export function AppSidebar(props: {
+type NavItem = {
+  title: string;
+
+  icon: LucideIcon;
+
+  isActive?: boolean;
+};
+
+export const AppSidebar = ({
+  items,
+  section,
+  onSectionChange,
+}: {
+  items: NavItem[];
   section: string;
   onSectionChange: (section: string) => void;
-}) {
+}) => {
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={data.company} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain
-          items={data.navMain}
-          onSectionChange={props.onSectionChange}
-          section={props.section}
+          items={items}
+          section={section}
+          onSectionChange={onSectionChange}
         />
       </SidebarContent>
       <SidebarFooter>
@@ -176,4 +81,4 @@ export function AppSidebar(props: {
       <SidebarRail />
     </Sidebar>
   );
-}
+};

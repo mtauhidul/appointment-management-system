@@ -25,16 +25,24 @@ export function LoginForm({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    // Handle form submission logic here
-    console.log("Email:", email);
-    console.log("Password:", password);
+
+    // Dummy authentication logic
+    const demoUsers = {
+      "patient@example.com": "/patient",
+      "kiosk@example.com": "/kiosk",
+      "caresync@example.com": "/caresync",
+    };
+
+    const userRole = demoUsers[email as keyof typeof demoUsers];
+    if (userRole) {
+      router.push(userRole);
+    } else {
+      alert("Invalid credentials");
+    }
 
     // Clear form fields
     setEmail("");
     setPassword("");
-
-    // Redirect to dashboard - This is dummy code, so will be updated later
-    router.push("/dashboard");
   };
 
   return (
@@ -81,14 +89,11 @@ export function LoginForm({
               <Button type="submit" className="w-full">
                 Login
               </Button>
-              <Button variant="outline" className="w-full">
+              {/* <Button variant="outline" className="w-full">
                 Login with Google
-              </Button>
+              </Button> */}
             </div>
             <div className="mt-4 text-center text-sm">
-              {/* <a href="/" className="underline underline-offset-4">
-                Back to home
-              </a> */}
               <Link href="/" passHref className="underline underline-offset-4">
                 Back to home
               </Link>
