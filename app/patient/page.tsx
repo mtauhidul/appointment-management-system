@@ -3,6 +3,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import Appointments from "@/components/patient/appointments/appointments";
 import Dashboard from "@/components/patient/dashboard/dashboard";
+import Kiosk from "@/components/patient/kiosk/kiosk";
 import Profile from "@/components/patient/profile/profile";
 import Reports from "@/components/patient/reports/reports";
 import {
@@ -24,6 +25,7 @@ import {
   ClipboardPlus,
   LayoutDashboard,
   SquareUser,
+  Text,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -32,6 +34,7 @@ const navItems = [
   { title: "Reports", icon: ClipboardPlus },
   { title: "Appointments", icon: CalendarDays },
   { title: "Profile", icon: SquareUser },
+  { title: "Kiosk", icon: Text },
 ];
 
 const componentMapping: { [key: string]: JSX.Element } = {
@@ -39,6 +42,7 @@ const componentMapping: { [key: string]: JSX.Element } = {
   Reports: <Reports />,
   Appointments: <Appointments />,
   Profile: <Profile />,
+  Kiosk: <Kiosk />,
 };
 
 export default function Patient() {
