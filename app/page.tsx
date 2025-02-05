@@ -56,15 +56,26 @@ const Home = () => {
               {headerText}
             </h1>
           </div>
-          <Link href="/login" passHref>
-            <Button
-              variant="default"
-              size="lg"
-              className="text-white font-bold bg-orange-600 hover:text-orange-600 hover:bg-white text-lg sm:text-base px-4 py-2 min-w-[120px]"
-            >
-              Login
-            </Button>
-          </Link>
+          <div className="flex gap-4">
+            <Link href="/patient/login" passHref>
+              <Button
+                variant="default"
+                size="lg"
+                className="text-white font-bold bg-orange-600 hover:text-orange-600 hover:bg-white text-sm sm:text-base px-4 py-2"
+              >
+                Patient
+              </Button>
+            </Link>
+            <Link href="/caresync/login" passHref>
+              <Button
+                variant="default"
+                size="lg"
+                className="text-white font-bold bg-orange-600 hover:text-orange-600 hover:bg-white text-sm sm:text-base px-4 py-2"
+              >
+                Provider
+              </Button>
+            </Link>
+          </div>
         </header>
 
         {/* Main Content */}
