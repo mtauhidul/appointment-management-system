@@ -2,6 +2,11 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import Dashboard from "@/components/caresync/dashboard/dashboard";
+import Patients from "@/components/caresync/patients/page";
+import Reports from "@/components/caresync/reports/page";
+import Resources from "@/components/caresync/resources/page";
+import Roles from "@/components/caresync/roles/page";
+import Status from "@/components/caresync/status/page";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,7 +21,14 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard } from "lucide-react";
+import {
+  ChartNoAxesCombined,
+  Layers,
+  LayoutDashboard,
+  ShieldCheck,
+  SquareCheckBig,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 
 export default function Caresync() {
@@ -27,6 +39,31 @@ export default function Caresync() {
       title: "Dashboard",
       icon: LayoutDashboard,
       isActive: section === "Dashboard",
+    },
+    {
+      title: "Patients",
+      icon: Users,
+      isActive: section === "Patients",
+    },
+    {
+      title: "Reports",
+      icon: ChartNoAxesCombined,
+      isActive: section === "Reports",
+    },
+    {
+      title: "Roles",
+      icon: ShieldCheck,
+      isActive: section === "Roles",
+    },
+    {
+      title: "Status",
+      icon: SquareCheckBig,
+      isActive: section === "Status",
+    },
+    {
+      title: "Resources",
+      icon: Layers,
+      isActive: section === "Resources",
     },
   ];
 
@@ -61,6 +98,11 @@ export default function Caresync() {
           </div>
         </header>
         {section === "Dashboard" && <Dashboard />}
+        {section === "Patients" && <Patients />}
+        {section === "Reports" && <Reports />}
+        {section === "Roles" && <Roles />}
+        {section === "Status" && <Status />}
+        {section === "Resources" && <Resources />}
       </SidebarInset>
     </SidebarProvider>
   );
