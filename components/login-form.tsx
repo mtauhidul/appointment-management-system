@@ -29,9 +29,7 @@ export function LoginForm({
 
     // Dummy authentication logic
     const demoUsers = {
-      "patient@example.com": "/patient",
-      "kiosk@example.com": "/kiosk",
-      "caresync@example.com": "/caresync",
+      "patient@example.com": "/patient/portal",
     };
 
     const userRole = demoUsers[email as keyof typeof demoUsers];

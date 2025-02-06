@@ -67,7 +67,7 @@ export default function Patient() {
                     onClick={() => setSection("Dashboard")}
                     className="cursor-pointer"
                   >
-                    Patient
+                    Portal
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
