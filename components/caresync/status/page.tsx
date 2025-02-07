@@ -124,7 +124,7 @@ const StatusSection = () => {
     <ToastProvider>
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Custom Statuses</h2>
+          <h2 className="text-xl font-semibold">Statuses</h2>
           <Button onClick={() => setIsDialogOpen(true)}>Add New Status</Button>
         </div>
 

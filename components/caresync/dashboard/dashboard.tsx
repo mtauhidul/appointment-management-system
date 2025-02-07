@@ -1,179 +1,404 @@
-import { CalendarIcon, VideoIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { PopoverClose } from "@radix-ui/react-popover";
+import { Bell, Clock, Minus, Plus, RotateCcw } from "lucide-react";
+import { useState } from "react";
+
+type Room = {
+  id: number;
+  number: number;
+  status:
+    | "Doctor IN"
+    | "Patient Ready"
+    | "Need Assistant"
+    | "Cleaning Room"
+    | "Empty";
+  timeRemaining: string;
+  isEmergency: boolean;
+  patientName?: string | null;
+  statusTime: number; // Timestamp of the last status change
+};
+
+type Doctor = {
+  id: number;
+  name: string;
+  specialization: string;
+  rooms: Room[];
+  patientCount: number;
+};
+
+const statusColors: { [key: string]: string } = {
+  "Doctor IN": "bg-green-100 border-green-500",
+  "Patient Ready": "bg-blue-100 border-blue-500",
+  "Need Assistant": "bg-red-100 border-red-500",
+  "Cleaning Room": "bg-yellow-100 border-yellow-500",
+  Empty: "bg-gray-100 border-gray-300",
+};
 
 const Dashboard = () => {
+  const [doctors, setDoctors] = useState<Doctor[]>([
+    {
+      id: 1,
+      name: "Dr. Emily Nguyen",
+      specialization: "Pediatrician",
+      rooms: [
+        {
+          id: 1,
+          number: 10,
+          status: "Doctor IN",
+          timeRemaining: "2:20",
+          isEmergency: false,
+          patientName: "Alice",
+          statusTime: Date.now() - 300000,
+        },
+        {
+          id: 2,
+          number: 11,
+          status: "Patient Ready",
+          timeRemaining: "2:20",
+          isEmergency: false,
+          patientName: "Bob",
+          statusTime: Date.now() - 200000,
+        },
+        {
+          id: 3,
+          number: 12,
+          status: "Patient Ready",
+          timeRemaining: "1:30",
+          isEmergency: true,
+          statusTime: Date.now() - 400000,
+        },
+        {
+          id: 4,
+          number: 13,
+          status: "Cleaning Room",
+          timeRemaining: "0:45",
+          isEmergency: false,
+          statusTime: Date.now() - 500000,
+        },
+        {
+          id: 5,
+          number: 14,
+          status: "Empty",
+          timeRemaining: "0:00",
+          isEmergency: false,
+          statusTime: 0,
+        },
+      ],
+      patientCount: 5,
+    },
+    {
+      id: 2,
+      name: "Dr. John Doe",
+      specialization: "Cardiologist",
+      rooms: [
+        {
+          id: 6,
+          number: 20,
+          status: "Doctor IN",
+          timeRemaining: "1:20",
+          isEmergency: false,
+          patientName: "Charlie",
+          statusTime: Date.now() - 600000,
+        },
+        {
+          id: 7,
+          number: 21,
+          status: "Patient Ready",
+          timeRemaining: "1:20",
+          isEmergency: false,
+          patientName: "David",
+          statusTime: Date.now() - 700000,
+        },
+        {
+          id: 8,
+          number: 22,
+          status: "Need Assistant",
+          timeRemaining: "0:45",
+          isEmergency: false,
+          patientName: "Eve",
+          statusTime: Date.now() - 800000,
+        },
+      ],
+      patientCount: 3,
+    },
+  ]);
+
+  const statuses = [
+    "Doctor IN",
+    "Patient Ready",
+    "Need Assistant",
+    "Cleaning Room",
+    "Empty",
+  ];
+
+  const handleRoomReset = (doctorId: number, roomId: number) => {
+    setDoctors((prevDoctors) =>
+      prevDoctors.map((doctor) =>
+        doctor.id === doctorId
+          ? {
+              ...doctor,
+              rooms: doctor.rooms.map((room) =>
+                room.id === roomId
+                  ? {
+                      ...room,
+                      status: "Empty",
+                      timeRemaining: "0:00",
+                      isEmergency: false,
+                      patientName: null,
+                      statusTime: 0,
+                    }
+                  : room
+              ),
+            }
+          : doctor
+      )
+    );
+  };
+
+  const handleToggleEmergency = (doctorId: number, roomId: number) => {
+    setDoctors((prevDoctors) =>
+      prevDoctors.map((doctor) =>
+        doctor.id === doctorId
+          ? {
+              ...doctor,
+              rooms: doctor.rooms.map((room) =>
+                room.id === roomId && room.status !== "Empty"
+                  ? { ...room, isEmergency: !room.isEmergency }
+                  : room
+              ),
+            }
+          : doctor
+      )
+    );
+  };
+
+  const handleUpdateStatus = (
+    doctorId: number,
+    roomId: number,
+    newStatus: Room["status"]
+  ) => {
+    setDoctors((prevDoctors) =>
+      prevDoctors.map((doctor) =>
+        doctor.id === doctorId
+          ? {
+              ...doctor,
+              rooms: doctor.rooms.map((room) =>
+                room.id === roomId
+                  ? {
+                      ...room,
+                      status: newStatus,
+                      isEmergency: false,
+                      statusTime: Date.now(),
+                    }
+                  : room
+              ),
+            }
+          : doctor
+      )
+    );
+  };
+
+  const handlePatientCountChange = (doctorId: number, delta: number) => {
+    setDoctors((prevDoctors) =>
+      prevDoctors.map((doctor) =>
+        doctor.id === doctorId
+          ? {
+              ...doctor,
+              patientCount: Math.max(0, doctor.patientCount + delta),
+            }
+          : doctor
+      )
+    );
+  };
+
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-        {/* Health Metrics Card */}
-        <div className="aspect-video rounded-xl bg-muted/50 p-6">
-          <h2 className="mb-4 text-xl font-semibold">Health Metrics</h2>
-          <div className="flex h-[calc(100%-3rem)] flex-col justify-between">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-lg bg-background p-3">
-                <p className="text-sm text-muted-foreground">BP</p>
-                <p className="text-2xl font-bold">120/80</p>
-              </div>
-              <div className="rounded-lg bg-background p-3">
-                <p className="text-sm text-muted-foreground">Heart Rate</p>
-                <p className="text-2xl font-bold">72</p>
-              </div>
-              <div className="rounded-lg bg-background p-3">
-                <p className="text-sm text-muted-foreground">SpO2</p>
-                <p className="text-2xl font-bold">98%</p>
-              </div>
-              <div className="rounded-lg bg-background p-3">
-                <p className="text-sm text-muted-foreground">Glucose</p>
-                <p className="text-2xl font-bold">92</p>
-              </div>
-            </div>
-            <div className="text-right text-sm text-primary">View Trends →</div>
-          </div>
-        </div>
-
-        {/* Appointments & Actions Card */}
-        <div className="aspect-video rounded-xl bg-muted/50 p-6">
-          <div className="flex h-full flex-col justify-between">
+    <div className="p-4 space-y-4">
+      {doctors.map((doctor) => (
+        <div
+          key={doctor.id}
+          className="space-y-4 bg-white p-4 rounded-lg shadow-lg"
+        >
+          {/* Doctor Info */}
+          <div className="flex justify-between items-center">
             <div>
-              <h2 className="mb-4 text-xl font-semibold">Upcoming</h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Annual Checkup</p>
-                    <p className="text-sm text-muted-foreground">
-                      Apr 15 · 10:00 AM
-                    </p>
+              <h2 className="text-xl font-bold">{doctor.name}</h2>
+              <p className="text-sm text-primary">{doctor.specialization}</p>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      doctor.rooms.forEach((room) =>
+                        handleRoomReset(doctor.id, room.id)
+                      )
+                    }
+                  >
+                    Reset All
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Reset all rooms for {doctor.name}</TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Patient Count */}
+          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-inner">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handlePatientCountChange(doctor.id, -1)}
+              disabled={doctor.patientCount === 0}
+            >
+              <Minus className="w-5 h-5 text-red-500" />
+            </Button>
+            <span className="text-lg font-semibold">
+              {doctor.patientCount} Patients
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handlePatientCountChange(doctor.id, 1)}
+            >
+              <Plus className="w-5 h-5 text-green-500" />
+            </Button>
+          </div>
+
+          {/* Room Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {doctor.rooms.map((room) => {
+              const sameStatusRooms = doctor.rooms
+                .filter((r) => r.status === room.status && r.status !== "Empty")
+                .sort((a, b) => a.statusTime - b.statusTime);
+              const serialNumber =
+                sameStatusRooms.findIndex((r) => r.id === room.id) + 1;
+
+              return (
+                <div
+                  key={room.id}
+                  className={`p-3 rounded-lg shadow-md flex flex-col items-center relative min-w-[200px] ${
+                    room.isEmergency
+                      ? "bg-red-200 border-red-500 animate-pulse"
+                      : statusColors[room.status]
+                  }`}
+                >
+                  {/* Room Header */}
+                  <div className="flex justify-between w-full">
+                    <span className="text-lg font-bold">{room.number}</span>
+                    <div className="flex items-center space-x-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleToggleEmergency(doctor.id, room.id)
+                              }
+                              disabled={room.status === "Empty"}
+                            >
+                              <Bell
+                                className={`w-5 h-5 ${
+                                  room.isEmergency
+                                    ? "text-red-500"
+                                    : "text-gray-500"
+                                }`}
+                              />
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {room.isEmergency
+                            ? "Disable Emergency"
+                            : "Enable Emergency"}
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleRoomReset(doctor.id, room.id)
+                              }
+                            >
+                              <RotateCcw className="w-5 h-5 text-gray-500" />
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>Reset Room</TooltipContent>
+                      </Tooltip>
+                    </div>
                   </div>
-                  <button className="rounded-full bg-primary p-2 text-white">
-                    <CalendarIcon className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Dermatology</p>
-                    <p className="text-sm text-muted-foreground">
-                      Apr 22 · 2:30 PM
-                    </p>
+
+                  {/* Status Badge */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <div>
+                        <Button
+                          variant="outline"
+                          className="mt-2 px-3 py-1 text-sm rounded-full bg-white shadow-md font-semibold text-gray-800 flex items-center"
+                        >
+                          {room.status !== "Empty" && (
+                            <span className="text-white font-bold bg-blue-600 w-6 h-6 flex items-center justify-center rounded-full shadow-lg text-lg mr-2">
+                              {serialNumber}
+                            </span>
+                          )}
+                          {room.status}
+                        </Button>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-3 bg-white shadow-lg rounded-lg space-y-2">
+                      {statuses.map((status) => (
+                        <PopoverClose asChild key={status}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-left hover:bg-gray-100"
+                            onClick={() =>
+                              handleUpdateStatus(
+                                doctor.id,
+                                room.id,
+                                status as Room["status"]
+                              )
+                            }
+                          >
+                            {status}
+                          </Button>
+                        </PopoverClose>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Patient Info */}
+                  <p className="text-sm text-gray-700 mt-2">
+                    {room.patientName || "No Patient"}
+                  </p>
+
+                  {/* Timer */}
+                  <div className="mt-3 flex items-center space-x-2 text-sm">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    <span>{room.timeRemaining}</span>
                   </div>
-                  <button className="rounded-full border p-2">
-                    <VideoIcon className="h-4 w-4" />
-                  </button>
                 </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button className="rounded-lg bg-primary p-2 text-sm text-white">
-                Schedule New
-              </button>
-              <button className="rounded-lg border p-2 text-sm">
-                Message Care Team
-              </button>
-            </div>
+              );
+            })}
           </div>
         </div>
-
-        {/* Recent Activity Card */}
-        <div className="aspect-video rounded-xl bg-muted/50 p-6">
-          <h2 className="mb-4 text-xl font-semibold">Recent Activity</h2>
-          <div className="h-[calc(100%-3rem)] overflow-y-auto">
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
-                <div>
-                  <p className="font-medium">New Lab Result</p>
-                  <p className="text-sm text-muted-foreground">
-                    Lipid Panel · Mar 1
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="mt-1 h-2 w-2 rounded-full bg-green-500" />
-                <div>
-                  <p className="font-medium">Prescription Renewed</p>
-                  <p className="text-sm text-muted-foreground">
-                    Metformin · Mar 5
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
-                <div>
-                  <p className="font-medium">Appointment Completed</p>
-                  <p className="text-sm text-muted-foreground">
-                    Dr. Smith · Feb 20
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Health Summary Section */}
-      <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 p-6 md:min-h-min">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Patient Overview */}
-          <div>
-            <h2 className="mb-4 text-xl font-semibold">Patient Overview</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-lg bg-background p-4">
-                <p className="text-sm text-muted-foreground">Allergies</p>
-                <p className="font-medium">Penicillin, Milk</p>
-              </div>
-              <div className="rounded-lg bg-background p-4">
-                <p className="text-sm text-muted-foreground">Conditions</p>
-                <p className="font-medium">Diabetes Type 2</p>
-              </div>
-              <div className="rounded-lg bg-background p-4">
-                <p className="text-sm text-muted-foreground">Medications</p>
-                <p className="font-medium">3 Active</p>
-              </div>
-              <div className="rounded-lg bg-background p-4">
-                <p className="text-sm text-muted-foreground">Last Visit</p>
-                <p className="font-medium">Feb 15, 2024</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Health Timeline */}
-          <div>
-            <h2 className="mb-4 text-xl font-semibold">Health Timeline</h2>
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="h-3 w-3 rounded-full bg-primary" />
-                  <div className="h-full w-px bg-border" />
-                </div>
-                <div>
-                  <p className="font-medium">Weight Check</p>
-                  <p className="text-sm text-muted-foreground">65kg · Mar 10</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="h-3 w-3 rounded-full bg-green-500" />
-                  <div className="h-full w-px bg-border" />
-                </div>
-                <div>
-                  <p className="font-medium">Vaccination</p>
-                  <p className="text-sm text-muted-foreground">
-                    Flu Shot · Feb 28
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="h-3 w-3 rounded-full bg-blue-500" />
-                  <div className="h-full w-px bg-border" />
-                </div>
-                <div>
-                  <p className="font-medium">Lab Work</p>
-                  <p className="text-sm text-muted-foreground">CBC · Feb 15</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      ))}
     </div>
   );
 };
