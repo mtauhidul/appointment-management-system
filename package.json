@@ -23,12 +23,14 @@
     "@radix-ui/react-tabs": "^1.1.3",
     "@radix-ui/react-toast": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.1.7",
+    "@tanstack/react-table": "^8.20.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^7.10.3",
     "lucide-react": "^0.474.0",
     "next": "14.2.16",
+    "papaparse": "^5.5.2",
     "react": "^18",
     "react-color": "^2.19.3",
     "react-day-picker": "8.10.1",
@@ -36,10 +38,12 @@
     "recharts": "^2.15.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "vaul": "^1.1.2"
+    "vaul": "^1.1.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/papaparse": "^5.3.15",
     "@types/react": "^18",
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^18",
