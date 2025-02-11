@@ -29,48 +29,44 @@ import {
   SquareCheckBig,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 export default function Caresync() {
-  const [section, setSection] = useState("Dashboard");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlSection = searchParams.get("section");
 
-  const sidebarItems = [
-    {
-      title: "Dashboard",
-      icon: LayoutDashboard,
-      isActive: section === "Dashboard",
-    },
-    {
-      title: "Patients",
-      icon: Users,
-      isActive: section === "Patients",
-    },
-    {
-      title: "Reports",
-      icon: ChartNoAxesCombined,
-      isActive: section === "Reports",
-    },
-    {
-      title: "Roles",
-      icon: ShieldCheck,
-      isActive: section === "Roles",
-    },
-    {
-      title: "Status",
-      icon: SquareCheckBig,
-      isActive: section === "Status",
-    },
-    {
-      title: "Resources",
-      icon: Layers,
-      isActive: section === "Resources",
-    },
-  ];
+  const [section, setSection] = useState<string>(() => {
+    return (
+      urlSection || localStorage.getItem("caresync-section") || "Dashboard"
+    );
+  });
+
+  useEffect(() => {
+    localStorage.setItem("caresync-section", section);
+    router.replace(`?section=${section}`, { scroll: false }); // Update URL without reloading
+  }, [section, router]);
+
+  const sidebarItems = useMemo(
+    () => [
+      { title: "Dashboard", icon: LayoutDashboard },
+      { title: "Patients", icon: Users },
+      { title: "Reports", icon: ChartNoAxesCombined },
+      { title: "Roles", icon: ShieldCheck },
+      { title: "Status", icon: SquareCheckBig },
+      { title: "Resources", icon: Layers },
+    ],
+    []
+  );
 
   return (
     <SidebarProvider>
       <AppSidebar
-        items={sidebarItems}
+        items={sidebarItems.map((item) => ({
+          ...item,
+          isActive: section === item.title,
+        }))}
         section={section}
         onSectionChange={setSection}
       />
@@ -97,6 +93,7 @@ export default function Caresync() {
             </Breadcrumb>
           </div>
         </header>
+
         {section === "Dashboard" && <Dashboard />}
         {section === "Patients" && <Patients />}
         {section === "Reports" && <Reports />}

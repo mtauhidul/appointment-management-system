@@ -1,3 +1,6 @@
+"use client";
+
+// Import Zustand store
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,28 +18,27 @@ import {
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
+import { useRoomStore } from "@/lib/store/useRoomStore";
 import { useMemo, useState } from "react";
 
 const ResourcesSection = () => {
   const { toast } = useToast();
-  const [rooms, setRooms] = useState<number[]>([1, 2, 3, 10, 12, 14, 16, 18]);
-  const [selectedRooms, setSelectedRooms] = useState<number[]>([]);
-  const [assignedRooms, setAssignedRooms] = useState<{ [key: number]: string }>(
-    {}
-  );
+  const { rooms, addRoom, updateRoom, deleteRoom } = useRoomStore(); // Zustand store
+
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newRoom, setNewRoom] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
 
   const filteredRooms = useMemo(
-    () => rooms.filter((room) => room.toString().includes(searchQuery)),
+    () => rooms.filter((room) => room.number.toString().includes(searchQuery)),
     [rooms, searchQuery]
   );
 
-  const createRoom = () => {
+  const handleCreateRoom = () => {
     const roomNumber = parseInt(newRoom);
-    if (isNaN(roomNumber) || rooms.includes(roomNumber)) {
+    if (isNaN(roomNumber) || rooms.some((room) => room.number === roomNumber)) {
       toast({
         title: "Error",
         description: "Invalid or duplicate room number.",
@@ -44,7 +46,18 @@ const ResourcesSection = () => {
       });
       return;
     }
-    setRooms((prev) => [...prev, roomNumber].sort((a, b) => a - b));
+
+    addRoom({
+      id: `${Date.now()}`,
+      number: roomNumber,
+      doctorsAssigned: [], // Now supports multiple doctors
+      patientAssigned: undefined,
+      status: "Available",
+      isEmergency: false,
+      color: "gray",
+      statusTime: new Date(),
+    });
+
     setNewRoom("");
     setIsDialogOpen(false);
     toast({
@@ -53,17 +66,11 @@ const ResourcesSection = () => {
     });
   };
 
-  const toggleRoomSelection = (room: number) => {
-    if (assignedRooms[room]) {
-      toast({
-        title: "Error",
-        description: "Room already assigned. Unassign it first.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const toggleRoomSelection = (roomId: string) => {
     setSelectedRooms((prev) =>
-      prev.includes(room) ? prev.filter((r) => r !== room) : [...prev, room]
+      prev.includes(roomId)
+        ? prev.filter((r) => r !== roomId)
+        : [...prev, roomId]
     );
   };
 
@@ -76,12 +83,18 @@ const ResourcesSection = () => {
       });
       return;
     }
-    setAssignedRooms((prev) => ({
-      ...prev,
-      ...Object.fromEntries(
-        selectedRooms.map((room) => [room, selectedDoctor])
-      ),
-    }));
+
+    selectedRooms.forEach((roomId) => {
+      const currentRoom = rooms.find((room) => room.id === roomId)!;
+
+      if (!currentRoom.doctorsAssigned.includes(selectedDoctor)) {
+        updateRoom(roomId, {
+          ...currentRoom,
+          doctorsAssigned: [...currentRoom.doctorsAssigned, selectedDoctor],
+        });
+      }
+    });
+
     setSelectedRooms([]);
     toast({
       title: "Success",
@@ -89,31 +102,25 @@ const ResourcesSection = () => {
     });
   };
 
-  const unassignRoom = (room: number) => {
-    setAssignedRooms((prev) => {
-      const updated = { ...prev };
-      delete updated[room];
-      return updated;
+  const unassignDoctorFromRoom = (roomId: string, doctor: string) => {
+    const currentRoom = rooms.find((room) => room.id === roomId)!;
+
+    updateRoom(roomId, {
+      ...currentRoom,
+      doctorsAssigned: currentRoom.doctorsAssigned.filter((d) => d !== doctor),
     });
+
     toast({
       title: "Success",
-      description: `Room #${room} unassigned successfully!`,
+      description: `Dr. ${doctor} unassigned from Room #${currentRoom.number}.`,
     });
   };
 
-  const removeRoom = (room: number) => {
-    if (assignedRooms[room]) {
-      toast({
-        title: "Error",
-        description: "Room is assigned. Unassign it first before removing.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setRooms((prev) => prev.filter((r) => r !== room));
+  const handleRemoveRoom = (roomId: string) => {
+    deleteRoom(roomId);
     toast({
       title: "Success",
-      description: `Room #${room} removed successfully!`,
+      description: `Room removed successfully!`,
     });
   };
 
@@ -143,51 +150,51 @@ const ResourcesSection = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredRooms.map((room) => (
             <div
-              key={room}
+              key={room.id}
               className={`relative p-4 rounded-lg border shadow-md flex flex-col items-start gap-2 transition ${
-                assignedRooms[room]
-                  ? "bg-red-50 border-red-500"
-                  : selectedRooms.includes(room)
+                selectedRooms.includes(room.id)
                   ? "bg-blue-50 border-blue-500"
                   : "bg-white border-gray-300"
               }`}
             >
               <div className="flex justify-between w-full items-center">
-                <h3 className="text-lg font-semibold">Room #{room}</h3>
-                {assignedRooms[room] && (
-                  <span className="text-sm bg-red-500 text-white rounded px-2">
-                    Assigned to {assignedRooms[room]}
-                  </span>
-                )}
+                <h3 className="text-lg font-semibold">Room #{room.number}</h3>
               </div>
-              <div className="flex items-center gap-2 w-full">
-                {!assignedRooms[room] && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleRoomSelection(room)}
+
+              {room.doctorsAssigned.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {room.doctorsAssigned.map((doctor) => (
+                    <span
+                      key={doctor}
+                      className="flex items-center bg-red-500 text-white text-xs px-2 py-1 rounded"
                     >
-                      {selectedRooms.includes(room) ? "Unselect" : "Select"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeRoom(room)}
-                    >
-                      Remove
-                    </Button>
-                  </>
-                )}
-                {assignedRooms[room] && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => unassignRoom(room)}
-                  >
-                    Unassign
-                  </Button>
-                )}
+                      {doctor}
+                      <button
+                        onClick={() => unassignDoctorFromRoom(room.id, doctor)}
+                        className="ml-2 text-xs hover:text-gray-300"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 w-full mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleRoomSelection(room.id)}
+                >
+                  {selectedRooms.includes(room.id) ? "Unselect" : "Select"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRemoveRoom(room.id)}
+                >
+                  Remove
+                </Button>
               </div>
             </div>
           ))}
@@ -214,7 +221,7 @@ const ResourcesSection = () => {
               value={newRoom}
               onChange={(e) => setNewRoom(e.target.value)}
             />
-            <Button onClick={createRoom} className="mt-4">
+            <Button onClick={handleCreateRoom} className="mt-4">
               Add Room
             </Button>
           </DialogContent>
