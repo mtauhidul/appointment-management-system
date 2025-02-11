@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,46 +23,23 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useStatusStore } from "@/lib/store/useStatusStore";
 import { Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import { SketchPicker } from "react-color";
 
-type Status = {
-  id: number;
-  name: string;
-  color: string;
-  activityType: "Doctor" | "Staff" | "Patient";
-  hasNotification: boolean;
-};
-
 const StatusSection = () => {
   const { toast } = useToast();
-  const [statuses, setStatuses] = useState<Status[]>([
-    {
-      id: 1,
-      name: "Doctor In",
-      color: "#34D399",
-      activityType: "Doctor",
-      hasNotification: true,
-    },
-    {
-      id: 2,
-      name: "Emergency",
-      color: "#F87171",
-      activityType: "Doctor",
-      hasNotification: false,
-    },
-    {
-      id: 3,
-      name: "On Break",
-      color: "#FBBF24",
-      activityType: "Doctor",
-      hasNotification: true,
-    },
-  ]);
+  const { statuses, addStatus, updateStatus, deleteStatus } = useStatusStore(); // Zustand store
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState<Status | null>(null);
-  const [newStatus, setNewStatus] = useState<Partial<Status>>({});
+  const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [newStatus, setNewStatus] = useState({
+    name: "",
+    color: "#000",
+    activityType: "",
+    hasSound: false,
+  });
   const [loading, setLoading] = useState(false);
 
   const saveStatus = () => {
@@ -76,26 +55,19 @@ const StatusSection = () => {
     setLoading(true);
     setTimeout(() => {
       if (isEditing) {
-        setStatuses((prev) =>
-          prev.map((status) =>
-            status.id === isEditing.id ? { ...status, ...newStatus } : status
-          )
-        );
+        updateStatus(isEditing, newStatus); // Zustand update
         toast({
           title: "Success",
           description: "Status updated successfully!",
         });
       } else {
-        setStatuses((prev) => [
-          ...prev,
-          {
-            id: prev.length + 1,
-            name: newStatus.name!,
-            color: newStatus.color!,
-            activityType: newStatus.activityType!,
-            hasNotification: newStatus.hasNotification || false,
-          },
-        ]);
+        addStatus({
+          id: `${Date.now()}`,
+          name: newStatus.name,
+          color: newStatus.color,
+          activityType: newStatus.activityType,
+          hasSound: newStatus.hasSound,
+        });
         toast({
           title: "Success",
           description: "Status created successfully!",
@@ -105,16 +77,13 @@ const StatusSection = () => {
     }, 1000);
   };
 
-  const deleteStatus = (id: number) => {
-    setStatuses((prev) => prev.filter((status) => status.id !== id));
-    toast({
-      title: "Deleted",
-      description: "Status deleted successfully!",
-    });
-  };
-
   const resetDialog = () => {
-    setNewStatus({});
+    setNewStatus({
+      name: "",
+      color: "#000",
+      activityType: "",
+      hasSound: false,
+    });
     setIsEditing(null);
     setIsDialogOpen(false);
     setLoading(false);
@@ -139,7 +108,7 @@ const StatusSection = () => {
                 <h3 className="font-semibold">{status.name}</h3>
                 <p className="text-sm text-gray-500">{status.activityType}</p>
                 <p className="text-sm text-gray-500">
-                  Notification: {status.hasNotification ? "Yes" : "No"}
+                  Notification: {status.hasSound ? "Yes" : "No"}
                 </p>
               </div>
               <div className="flex space-x-2">
@@ -149,8 +118,11 @@ const StatusSection = () => {
                       variant="outline"
                       size="icon"
                       onClick={() => {
-                        setIsEditing(status);
-                        setNewStatus(status);
+                        setIsEditing(status.id);
+                        setNewStatus({
+                          ...status,
+                          hasSound: status.hasSound ?? false,
+                        });
                         setIsDialogOpen(true);
                       }}
                     >
@@ -187,7 +159,7 @@ const StatusSection = () => {
             <div className="space-y-4">
               <Input
                 placeholder="Enter status name"
-                value={newStatus.name || ""}
+                value={newStatus.name}
                 onChange={(e) =>
                   setNewStatus({ ...newStatus, name: e.target.value })
                 }
@@ -195,20 +167,17 @@ const StatusSection = () => {
               <div>
                 <p className="mb-2 text-sm">Choose a color</p>
                 <SketchPicker
-                  color={newStatus.color || "#000"}
-                  onChangeComplete={(color: { hex: string }) =>
+                  color={newStatus.color}
+                  onChangeComplete={(color) =>
                     setNewStatus({ ...newStatus, color: color.hex })
                   }
                 />
               </div>
               <Select
                 onValueChange={(value) =>
-                  setNewStatus({
-                    ...newStatus,
-                    activityType: value as Status["activityType"],
-                  })
+                  setNewStatus({ ...newStatus, activityType: value })
                 }
-                value={newStatus.activityType || ""}
+                value={newStatus.activityType}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select activity type" />
@@ -222,12 +191,9 @@ const StatusSection = () => {
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  checked={newStatus.hasNotification || false}
+                  checked={newStatus.hasSound}
                   onChange={(e) =>
-                    setNewStatus({
-                      ...newStatus,
-                      hasNotification: e.target.checked,
-                    })
+                    setNewStatus({ ...newStatus, hasSound: e.target.checked })
                   }
                 />
                 <label className="text-sm">Add notification sound</label>
