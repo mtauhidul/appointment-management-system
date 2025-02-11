@@ -9,6 +9,7 @@ interface Room {
   isEmergency: boolean;
   color: string;
   statusTime: Date;
+  statusOrder: number;
 }
 
 interface RoomStore {

@@ -117,7 +117,7 @@ const Roles = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Roles</h1>
         <Button onClick={() => setIsDialogOpen(true)}>
-          Add New{" "}
+          Add New
           {activeTab === "doctors"
             ? "Doctor"
             : activeTab === "assistants"
@@ -171,7 +171,7 @@ const Roles = () => {
                       <h3 className="text-lg font-semibold">{role.name}</h3>
                       <div className="flex space-x-2">
                         <Tooltip>
-                          <TooltipTrigger>
+                          <TooltipTrigger asChild>
                             <Button
                               variant="outline"
                               size="sm"
@@ -181,22 +181,26 @@ const Roles = () => {
                                 setIsDialogOpen(true);
                               }}
                             >
+                              <TooltipContent>Edit</TooltipContent>
                               <Edit className="w-4 h-4" />
                             </Button>
                           </TooltipTrigger>
+
                           <TooltipContent>Edit</TooltipContent>
                         </Tooltip>
                         <Tooltip>
-                          <TooltipTrigger>
+                          <TooltipTrigger asChild>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleDeleteRole(role.id)}
                               className="text-red-500 hover:bg-red-100"
                             >
+                              <TooltipContent>Delete</TooltipContent>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </TooltipTrigger>
+
                           <TooltipContent>Delete</TooltipContent>
                         </Tooltip>
                       </div>
