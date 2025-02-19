@@ -1,11 +1,6 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import Appointments from "@/components/patient/appointments/appointments";
-import Dashboard from "@/components/patient/dashboard/dashboard";
-import Kiosk from "@/components/patient/kiosk/kiosk";
-import Profile from "@/components/patient/profile/profile";
-import Reports from "@/components/patient/reports/reports";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -27,31 +22,54 @@ import {
   SquareUser,
   Text,
 } from "lucide-react";
-import { useState } from "react";
-
-const navItems = [
-  { title: "Dashboard", icon: LayoutDashboard },
-  { title: "Reports", icon: ClipboardPlus },
-  { title: "Appointments", icon: CalendarDays },
-  { title: "Profile", icon: SquareUser },
-  { title: "Kiosk", icon: Text },
-];
-
-const componentMapping: { [key: string]: JSX.Element } = {
-  Dashboard: <Dashboard />,
-  Reports: <Reports />,
-  Appointments: <Appointments />,
-  Profile: <Profile />,
-  Kiosk: <Kiosk />,
-};
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import Appointments from "./appointments/appointments";
+import Dashboard from "./dashboard/dashboard";
+import Kiosk from "./kiosk/kiosk";
+import Profile from "./profile/profile";
+import Reports from "./reports/reports";
 
 export default function Patient() {
-  const [section, setSection] = useState<string>("Dashboard");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlSection = searchParams.get("section");
+
+  const [section, setSection] = useState<string>(() => {
+    return urlSection || localStorage.getItem("patient-section") || "Dashboard";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("patient-section", section);
+    router.replace(`?section=${section}`, { scroll: false });
+  }, [section, router]);
+
+  const sidebarItems = useMemo(
+    () => [
+      { title: "Dashboard", icon: LayoutDashboard },
+      { title: "Reports", icon: ClipboardPlus },
+      { title: "Appointments", icon: CalendarDays },
+      { title: "Profile", icon: SquareUser },
+      { title: "Kiosk", icon: Text },
+    ],
+    []
+  );
+
+  const componentMapping: { [key: string]: JSX.Element } = {
+    Dashboard: <Dashboard />,
+    Reports: <Reports />,
+    Appointments: <Appointments />,
+    Profile: <Profile />,
+    Kiosk: <Kiosk />,
+  };
 
   return (
     <SidebarProvider>
       <AppSidebar
-        items={navItems}
+        items={sidebarItems.map((item) => ({
+          ...item,
+          isActive: section === item.title,
+        }))}
         section={section}
         onSectionChange={setSection}
       />
@@ -67,7 +85,7 @@ export default function Patient() {
                     onClick={() => setSection("Dashboard")}
                     className="cursor-pointer"
                   >
-                    Portal
+                    Patient
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
@@ -78,6 +96,7 @@ export default function Patient() {
             </Breadcrumb>
           </div>
         </header>
+
         {componentMapping[section as keyof typeof componentMapping]}
       </SidebarInset>
     </SidebarProvider>

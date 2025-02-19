@@ -1,12 +1,7 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import Dashboard from "@/components/caresync/dashboard/dashboard";
-import Patients from "@/components/caresync/patients/page";
-import Reports from "@/components/caresync/reports/page";
-import Resources from "@/components/caresync/resources/page";
-import Roles from "@/components/caresync/roles/page";
-import Status from "@/components/caresync/status/page";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -31,6 +26,12 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import Dashboard from "./dashboard/dashboard";
+import PatientsSection from "./patients/page";
+import Reports from "./reports/page";
+import ResourcesSection from "./resources/page";
+import Roles from "./roles/page";
+import StatusSection from "./status/page";
 
 export default function Caresync() {
   const router = useRouter();
@@ -95,11 +96,11 @@ export default function Caresync() {
         </header>
 
         {section === "Dashboard" && <Dashboard />}
-        {section === "Patients" && <Patients />}
+        {section === "Patients" && <PatientsSection />}
         {section === "Reports" && <Reports />}
         {section === "Roles" && <Roles />}
-        {section === "Status" && <Status />}
-        {section === "Resources" && <Resources />}
+        {section === "Status" && <StatusSection />}
+        {section === "Resources" && <ResourcesSection />}
       </SidebarInset>
     </SidebarProvider>
   );
