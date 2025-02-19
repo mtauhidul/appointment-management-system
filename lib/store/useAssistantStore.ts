@@ -6,6 +6,7 @@ interface Assistant {
   email: string;
   phone: string;
   doctorsAssigned: string[];
+  specialty?: string;
 }
 
 interface AssistantStore {

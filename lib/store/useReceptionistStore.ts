@@ -5,6 +5,7 @@ interface Receptionist {
   name: string;
   email: string;
   phone: string;
+  specialty?: string;
 }
 
 interface ReceptionistStore {

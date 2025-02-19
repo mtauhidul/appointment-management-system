@@ -56,6 +56,7 @@ const ResourcesSection = () => {
       isEmergency: false,
       color: "gray",
       statusTime: new Date(),
+      statusOrder: 0,
     });
 
     setNewRoom("");

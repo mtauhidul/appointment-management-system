@@ -8,7 +8,7 @@ export default function Kiosk() {
     <div className="relative flex h-full w-full items-center justify-center p-6 md:p-10 bg-gray-100">
       <button
         onClick={() => setIsOpen(true)}
-        className="border border-primary p-2 px-4 cursor-pointer rounded-lg text-primary font-semibold text-sm hover:bg-primary hover:text-white h-10"
+        className="border border-primary p-4 px-6 cursor-pointer rounded-lg text-primary font-semibold text-sm hover:bg-primary hover:text-white h-14"
       >
         Start KIOSK
       </button>
