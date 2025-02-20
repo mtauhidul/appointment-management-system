@@ -14,8 +14,8 @@ interface AssistantStore {
   addAssistant: (assistant: Assistant) => void;
   updateAssistant: (id: string, updates: Partial<Assistant>) => void;
   deleteAssistant: (id: string) => void;
-  assignDoctorToAssistant: (assistantId: string, doctorName: string) => void;
-  removeDoctorFromAssistant: (assistantId: string, doctorName: string) => void;
+  assignDoctorToAssistant: (assistantId: string, doctorId: string) => void;
+  removeDoctorFromAssistant: (assistantId: string, doctorId: string) => void;
 }
 
 const assistantStore: StateCreator<AssistantStore> = (set) => ({
@@ -36,27 +36,28 @@ const assistantStore: StateCreator<AssistantStore> = (set) => ({
       assistants: state.assistants.filter((assistant) => assistant.id !== id),
     })),
 
-  assignDoctorToAssistant: (assistantId: string, doctorName: string) =>
+  assignDoctorToAssistant: (assistantId, doctorId) =>
     set((state) => ({
       assistants: state.assistants.map((assistant) =>
-        assistant.id === assistantId &&
-        !assistant.doctorsAssigned.includes(doctorName)
+        assistant.id === assistantId
           ? {
               ...assistant,
-              doctorsAssigned: [...assistant.doctorsAssigned, doctorName],
+              doctorsAssigned: Array.from(
+                new Set([...(assistant.doctorsAssigned || []), doctorId]) // ✅ Ensure no duplicates
+              ),
             }
           : assistant
       ),
     })),
 
-  removeDoctorFromAssistant: (assistantId: string, doctorName: string) =>
+  removeDoctorFromAssistant: (assistantId, doctorId) =>
     set((state) => ({
       assistants: state.assistants.map((assistant) =>
         assistant.id === assistantId
           ? {
               ...assistant,
               doctorsAssigned: assistant.doctorsAssigned.filter(
-                (doc) => doc !== doctorName
+                (id) => id !== doctorId
               ),
             }
           : assistant

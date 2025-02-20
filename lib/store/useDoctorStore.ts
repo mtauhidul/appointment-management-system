@@ -7,7 +7,7 @@ interface Doctor {
   email: string;
   phone: string;
   roomsAssigned: string[];
-  assistantAssigned?: string;
+  assistantsAssigned: string[]; // Changed from string to array
   patients: string[];
 }
 
@@ -20,6 +20,8 @@ interface DoctorStore {
   removeRoomAssignment: (doctorId: string, roomId: string) => void;
   assignPatient: (doctorId: string, patientId: string) => void;
   removePatient: (doctorId: string, patientId: string) => void;
+  assignAssistant: (doctorId: string, assistantId: string) => void;
+  removeAssistant: (doctorId: string, assistantId: string) => void;
 }
 
 export const useDoctorStore = create<DoctorStore>((set) => ({
@@ -77,6 +79,34 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
           ? {
               ...doc,
               patients: doc.patients.filter((p) => p !== patientId),
+            }
+          : doc
+      ),
+    })),
+
+  assignAssistant: (doctorId, assistantId) =>
+    set((state) => ({
+      doctors: state.doctors.map((doc) =>
+        doc.id === doctorId
+          ? {
+              ...doc,
+              assistantsAssigned: Array.from(
+                new Set([...doc.assistantsAssigned, assistantId])
+              ), // Ensure unique assistants
+            }
+          : doc
+      ),
+    })),
+
+  removeAssistant: (doctorId, assistantId) =>
+    set((state) => ({
+      doctors: state.doctors.map((doc) =>
+        doc.id === doctorId
+          ? {
+              ...doc,
+              assistantsAssigned: doc.assistantsAssigned.filter(
+                (aId) => aId !== assistantId
+              ),
             }
           : doc
       ),

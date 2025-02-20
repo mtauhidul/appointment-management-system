@@ -1,6 +1,5 @@
 "use client";
 
-// Import Zustand store
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,7 +22,7 @@ import { useMemo, useState } from "react";
 
 const ResourcesSection = () => {
   const { toast } = useToast();
-  const { rooms, addRoom, updateRoom, deleteRoom } = useRoomStore(); // Zustand store
+  const { rooms, addRoom, updateRoom, deleteRoom } = useRoomStore();
 
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -50,7 +49,7 @@ const ResourcesSection = () => {
     addRoom({
       id: `${Date.now()}`,
       number: roomNumber,
-      doctorsAssigned: [], // Now supports multiple doctors
+      doctorsAssigned: [],
       patientAssigned: undefined,
       status: "Available",
       isEmergency: false,
