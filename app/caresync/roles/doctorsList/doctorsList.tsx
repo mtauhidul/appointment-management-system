@@ -9,12 +9,15 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAssistantStore } from "@/lib/store/useAssistantStore";
 import { useDoctorStore } from "@/lib/store/useDoctorStore";
+import { useRoomStore } from "@/lib/store/useRoomStore"; // ✅ Fetch assigned rooms dynamically
 import { Briefcase, Edit, Mail, Phone, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const DoctorsList = () => {
   const { doctors, addDoctor, updateDoctor, deleteDoctor } = useDoctorStore();
   const { assistants } = useAssistantStore();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { rooms } = useRoomStore(); // ✅ Get updated rooms from store
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -27,6 +30,25 @@ const DoctorsList = () => {
     phone: "",
     specialty: "",
   });
+
+  useEffect(() => {
+    if (isUpdating) return;
+
+    setIsUpdating(true);
+    doctors.forEach((doctor) => {
+      const assignedRoomIds = rooms
+        .filter((room) => room.doctorsAssigned.includes(doctor.id))
+        .map((room) => room.number.toString());
+
+      if (
+        JSON.stringify(doctor.roomsAssigned.sort()) !==
+        JSON.stringify(assignedRoomIds.sort())
+      ) {
+        updateDoctor(doctor.id, { roomsAssigned: assignedRoomIds });
+      }
+    });
+    setIsUpdating(false);
+  }, [rooms]);
 
   const handleSaveDoctor = () => {
     if (
@@ -74,6 +96,7 @@ const DoctorsList = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {doctors.map((doctor) => {
+          // ✅ Get dynamically assigned assistants
           const assignedAssistants = assistants.filter((a) =>
             a.doctorsAssigned.includes(doctor.id)
           );
@@ -97,6 +120,7 @@ const DoctorsList = () => {
                 {doctor.phone}
               </p>
 
+              {/* ✅ Assigned Assistants */}
               <p className="text-sm text-gray-700">
                 <span className="font-medium">Assigned Assistants:</span>{" "}
                 <span className="text-gray-500">
@@ -106,6 +130,7 @@ const DoctorsList = () => {
                 </span>
               </p>
 
+              {/* ✅ Assigned Rooms (Updated Dynamically) */}
               <p className="text-sm text-gray-700">
                 <span className="font-medium">Assigned Rooms:</span>{" "}
                 <span className="text-gray-500">
