@@ -1,16 +1,6 @@
+import { Doctor } from "@/lib/types";
 import { create } from "zustand";
 import { useRoomStore } from "./useRoomStore";
-
-interface Doctor {
-  id: string;
-  name: string;
-  specialty: string;
-  email: string;
-  phone: string;
-  roomsAssigned: string[];
-  assistantsAssigned: string[]; // Changed from string to array
-  patients: string[];
-}
 
 interface DoctorStore {
   doctors: Doctor[];

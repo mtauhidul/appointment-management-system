@@ -1,12 +1,5 @@
+import { Receptionist } from "@/lib/types";
 import { create } from "zustand";
-
-interface Receptionist {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  specialty?: string;
-}
 
 interface ReceptionistStore {
   receptionists: Receptionist[];

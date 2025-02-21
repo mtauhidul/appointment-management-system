@@ -1,12 +1,5 @@
+import { Status } from "@/lib/types";
 import { create } from "zustand";
-
-interface Status {
-  id: string;
-  name: string;
-  color: string;
-  activityType: string;
-  hasSound?: boolean;
-}
 
 interface StatusStore {
   statuses: Status[];

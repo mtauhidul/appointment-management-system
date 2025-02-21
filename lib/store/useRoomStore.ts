@@ -1,16 +1,5 @@
+import { Room } from "@/lib/types";
 import { create } from "zustand";
-
-interface Room {
-  id: string;
-  number: number;
-  doctorsAssigned: string[];
-  patientAssigned?: string;
-  status: string;
-  isEmergency: boolean;
-  color: string;
-  statusTime: Date;
-  statusOrder: number;
-}
 
 interface RoomStore {
   rooms: Room[];
