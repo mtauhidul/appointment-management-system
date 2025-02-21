@@ -90,6 +90,10 @@ const DoctorsList = () => {
     setNewDoctor({ name: "", email: "", phone: "", specialty: "" });
   };
 
+  useEffect(() => {
+    console.log("DoctorsList rendered", doctors);
+  }, [doctors]);
+
   return (
     <div className="space-y-4">
       <Button onClick={() => setIsDialogOpen(true)}>Add New Doctor</Button>

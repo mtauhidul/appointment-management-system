@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useRoomStore } from "./useRoomStore";
 
 interface Doctor {
   id: string;
@@ -37,10 +38,21 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
       ),
     })),
 
-  deleteDoctor: (id) =>
+  deleteDoctor: (id) => {
+    const { updateRoom } = useRoomStore.getState();
+
+    useRoomStore.getState().rooms.forEach((room) => {
+      if (room.doctorsAssigned.includes(id)) {
+        updateRoom(room.id, {
+          doctorsAssigned: room.doctorsAssigned.filter((docId) => docId !== id),
+        });
+      }
+    });
+
     set((state) => ({
       doctors: state.doctors.filter((doc) => doc.id !== id),
-    })),
+    }));
+  },
 
   assignRoom: (doctorId, roomId) =>
     set((state) => ({

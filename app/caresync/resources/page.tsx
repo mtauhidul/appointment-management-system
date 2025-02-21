@@ -17,14 +17,14 @@ import {
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import { useDoctorStore } from "@/lib/store/useDoctorStore"; // ✅ Fetch doctors dynamically
+import { useDoctorStore } from "@/lib/store/useDoctorStore";
 import { useRoomStore } from "@/lib/store/useRoomStore";
 import { useMemo, useState } from "react";
 
 const ResourcesSection = () => {
   const { toast } = useToast();
   const { rooms, addRoom, updateRoom, deleteRoom } = useRoomStore();
-  const { doctors } = useDoctorStore(); // ✅ Fetch doctors dynamically
+  const { doctors, assignRoom, removeRoomAssignment } = useDoctorStore();
 
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -32,7 +32,7 @@ const ResourcesSection = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
 
-  // ✅ Filter rooms based on search
+  // ✅ Filter rooms dynamically based on search query
   const filteredRooms = useMemo(
     () => rooms.filter((room) => room.number.toString().includes(searchQuery)),
     [rooms, searchQuery]
@@ -50,8 +50,10 @@ const ResourcesSection = () => {
       return;
     }
 
+    const newRoomId = `${Date.now()}`; // Generate unique ID
+
     addRoom({
-      id: `${Date.now()}`,
+      id: newRoomId,
       number: roomNumber,
       doctorsAssigned: [],
       patientAssigned: undefined,
@@ -79,7 +81,7 @@ const ResourcesSection = () => {
     );
   };
 
-  // ✅ Assign Selected Rooms to a Doctor (Prevent Duplicates)
+  // ✅ Assign Selected Rooms to a Doctor
   const assignRooms = () => {
     if (!selectedDoctor) {
       toast({
@@ -95,12 +97,14 @@ const ResourcesSection = () => {
     selectedRooms.forEach((roomId) => {
       const currentRoom = rooms.find((room) => room.id === roomId)!;
 
-      // ✅ Prevent assigning the same room multiple times to the same doctor
+      // ✅ Prevent duplicate assignments
       if (!currentRoom.doctorsAssigned.includes(selectedDoctor)) {
         updateRoom(roomId, {
           ...currentRoom,
           doctorsAssigned: [...currentRoom.doctorsAssigned, selectedDoctor],
         });
+
+        assignRoom(selectedDoctor, roomId);
         assignedCount++;
       }
     });
@@ -133,6 +137,8 @@ const ResourcesSection = () => {
         (d) => d !== doctorId
       ),
     });
+
+    removeRoomAssignment(doctorId, roomId);
 
     toast({
       title: "Success",
@@ -197,27 +203,24 @@ const ResourcesSection = () => {
               </div>
 
               {/* ✅ Assigned Doctors */}
-              {room.doctorsAssigned.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {room.doctorsAssigned.map((doctorId) => (
-                    <span
-                      key={doctorId}
-                      className="flex items-center bg-red-500 text-white text-xs px-2 py-1 rounded"
+              {room.doctorsAssigned
+                .filter((doctorId) =>
+                  doctors.some((doc) => doc.id === doctorId)
+                ) // ✅ Only show existing doctors
+                .map((doctorId) => (
+                  <span
+                    key={doctorId}
+                    className="flex items-center bg-red-500 text-white text-xs px-2 py-1 rounded"
+                  >
+                    {doctors.find((d) => d.id === doctorId)?.name}
+                    <button
+                      onClick={() => unassignDoctorFromRoom(room.id, doctorId)}
+                      className="ml-2 text-xs hover:text-gray-300"
                     >
-                      {doctors.find((d) => d.id === doctorId)?.name ||
-                        "Unknown"}
-                      <button
-                        onClick={() =>
-                          unassignDoctorFromRoom(room.id, doctorId)
-                        }
-                        className="ml-2 text-xs hover:text-gray-300"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+                      ✕
+                    </button>
+                  </span>
+                ))}
 
               {/* ✅ Room Actions */}
               <div className="flex items-center gap-2 w-full mt-3">
