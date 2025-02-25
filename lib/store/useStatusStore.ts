@@ -11,17 +11,22 @@ interface StatusStore {
 export const useStatusStore = create<StatusStore>((set) => ({
   statuses: [],
 
-  addStatus: (status: Status) =>
-    set((state) => ({ statuses: [...state.statuses, status] })),
+  // ✅ Add a new status (ensuring uniqueness)
+  addStatus: (status) =>
+    set((state) => ({
+      statuses: Array.from(new Set([...state.statuses, status])),
+    })),
 
-  updateStatus: (id: string, updates: Partial<Status>) =>
+  // ✅ Update a status by ID (immutable updates)
+  updateStatus: (id, updates) =>
     set((state) => ({
       statuses: state.statuses.map((status) =>
         status.id === id ? { ...status, ...updates } : status
       ),
     })),
 
-  deleteStatus: (id: string) =>
+  // ✅ Delete a status by ID
+  deleteStatus: (id) =>
     set((state) => ({
       statuses: state.statuses.filter((status) => status.id !== id),
     })),

@@ -19,12 +19,17 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { useDoctorStore } from "@/lib/store/useDoctorStore";
 import { useRoomStore } from "@/lib/store/useRoomStore";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const ResourcesSection = () => {
   const { toast } = useToast();
   const { rooms, addRoom, updateRoom, deleteRoom } = useRoomStore();
   const { doctors, assignRoom, removeRoomAssignment } = useDoctorStore();
+
+  useEffect(() => {
+    console.log("Rooms:", rooms);
+    console.log("Doctors:", doctors);
+  }, [rooms, doctors]);
 
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -57,7 +62,7 @@ const ResourcesSection = () => {
       number: roomNumber,
       doctorsAssigned: [],
       patientAssigned: undefined,
-      status: "Available",
+      status: "Empty",
       isEmergency: false,
       color: "gray",
       statusTime: new Date(),
@@ -68,7 +73,7 @@ const ResourcesSection = () => {
     setIsDialogOpen(false);
     toast({
       title: "Success",
-      description: `Room #${roomNumber} created successfully!`,
+      description: `Room ${roomNumber} created successfully!`,
     });
   };
 
@@ -144,7 +149,7 @@ const ResourcesSection = () => {
       title: "Success",
       description: `Dr. ${
         doctors.find((d) => d.id === doctorId)?.name || "Unknown"
-      } unassigned from Room #${currentRoom.number}.`,
+      } unassigned from Room ${currentRoom.number}.`,
     });
   };
 
@@ -185,10 +190,13 @@ const ResourcesSection = () => {
 
           {/* ✅ Create New Room */}
           <Button onClick={() => setIsDialogOpen(true)}>Create Room</Button>
+          <Button disabled={selectedRooms.length === 0} onClick={assignRooms}>
+            Assign Rooms
+          </Button>
         </div>
 
         {/* ✅ Rooms List */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredRooms.map((room) => (
             <div
               key={room.id}
@@ -199,7 +207,7 @@ const ResourcesSection = () => {
               }`}
             >
               <div className="flex justify-between w-full items-center">
-                <h3 className="text-lg font-semibold">Room #{room.number}</h3>
+                <h3 className="text-lg font-semibold"># {room.number}</h3>
               </div>
 
               {/* ✅ Assigned Doctors */}
@@ -242,36 +250,25 @@ const ResourcesSection = () => {
             </div>
           ))}
         </div>
-
-        {/* ✅ Assign Rooms Button */}
-        <div className="flex justify-end">
-          <Button
-            onClick={assignRooms}
-            disabled={!selectedDoctor || selectedRooms.length === 0}
-            className="bg-primary text-white"
-          >
-            Assign Rooms to Selected Doctor
-          </Button>
-        </div>
-
-        {/* ✅ Create Room Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create a New Room</DialogTitle>
-            </DialogHeader>
-            <Input
-              placeholder="Enter room number"
-              type="number"
-              value={newRoom}
-              onChange={(e) => setNewRoom(e.target.value)}
-            />
-            <Button onClick={handleCreateRoom} className="mt-4">
-              Add Room
-            </Button>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      {/* ✅ Dialog for Creating Rooms */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create a New Room</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Enter room number"
+            type="number"
+            value={newRoom}
+            onChange={(e) => setNewRoom(e.target.value)}
+          />
+          <Button onClick={handleCreateRoom} className="mt-4">
+            Add Room
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <Toaster />
     </>

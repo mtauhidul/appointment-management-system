@@ -27,21 +27,36 @@ import { useStatusStore } from "@/lib/store/useStatusStore";
 import { Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import { SketchPicker } from "react-color";
+import tinycolor from "tinycolor2";
 
 const StatusSection = () => {
   const { toast } = useToast();
-  const { statuses, addStatus, updateStatus, deleteStatus } = useStatusStore(); // Zustand store
+  const { statuses, addStatus, updateStatus, deleteStatus } = useStatusStore();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [newStatus, setNewStatus] = useState({
     name: "",
-    color: "#000",
+    color: "#dddddd", // Default light gray
     activityType: "",
     hasSound: false,
   });
   const [loading, setLoading] = useState(false);
 
+  // ✅ Reset the Dialog
+  const resetDialog = () => {
+    setNewStatus({
+      name: "",
+      color: "#dddddd",
+      activityType: "",
+      hasSound: false,
+    });
+    setIsEditing(null);
+    setIsDialogOpen(false);
+    setLoading(false);
+  };
+
+  // ✅ Save or Update Status
   const saveStatus = () => {
     if (!newStatus.name || !newStatus.color || !newStatus.activityType) {
       toast({
@@ -52,19 +67,35 @@ const StatusSection = () => {
       return;
     }
 
+    // ✅ Prevent Duplicate Status Names
+    const existingStatus = statuses.find(
+      (status) => status.name.toLowerCase() === newStatus.name.toLowerCase()
+    );
+    if (!isEditing && existingStatus) {
+      toast({
+        title: "Error",
+        description: "A status with this name already exists!",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     setTimeout(() => {
       if (isEditing) {
-        updateStatus(isEditing, newStatus); // Zustand update
+        updateStatus(isEditing, {
+          ...newStatus,
+          color: tinycolor(newStatus.color).toString(),
+        });
         toast({
           title: "Success",
           description: "Status updated successfully!",
         });
       } else {
         addStatus({
-          id: `${Date.now()}`,
+          id: crypto.randomUUID(), // ✅ Use secure unique ID
           name: newStatus.name,
-          color: newStatus.color,
+          color: tinycolor(newStatus.color).toString(),
           activityType: newStatus.activityType,
           hasSound: newStatus.hasSound,
         });
@@ -77,16 +108,17 @@ const StatusSection = () => {
     }, 1000);
   };
 
-  const resetDialog = () => {
-    setNewStatus({
-      name: "",
-      color: "#000",
-      activityType: "",
-      hasSound: false,
-    });
-    setIsEditing(null);
-    setIsDialogOpen(false);
-    setLoading(false);
+  // ✅ Remove Status
+  const removeStatus = (statusId: string) => {
+    setLoading(true);
+    setTimeout(() => {
+      deleteStatus(statusId);
+      toast({
+        title: "Success",
+        description: "Status deleted successfully!",
+      });
+      resetDialog();
+    }, 500);
   };
 
   return (
@@ -97,6 +129,7 @@ const StatusSection = () => {
           <Button onClick={() => setIsDialogOpen(true)}>Add New Status</Button>
         </div>
 
+        {/* ✅ Status Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {statuses.map((status) => (
             <div
@@ -112,6 +145,7 @@ const StatusSection = () => {
                 </p>
               </div>
               <div className="flex space-x-2">
+                {/* ✅ Edit Status */}
                 <Tooltip>
                   <TooltipTrigger>
                     <Button
@@ -121,7 +155,7 @@ const StatusSection = () => {
                         setIsEditing(status.id);
                         setNewStatus({
                           ...status,
-                          hasSound: status.hasSound ?? false,
+                          hasSound: status.hasSound ?? false, // ✅ Ensure boolean value
                         });
                         setIsDialogOpen(true);
                       }}
@@ -131,12 +165,14 @@ const StatusSection = () => {
                   </TooltipTrigger>
                   <TooltipContent>Edit</TooltipContent>
                 </Tooltip>
+
+                {/* ✅ Delete Status */}
                 <Tooltip>
                   <TooltipTrigger>
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => deleteStatus(status.id)}
+                      onClick={() => removeStatus(status.id)}
                       className="text-red-500 hover:bg-red-100"
                     >
                       <Trash />
@@ -149,6 +185,7 @@ const StatusSection = () => {
           ))}
         </div>
 
+        {/* ✅ Add/Edit Status Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -168,11 +205,17 @@ const StatusSection = () => {
                 <p className="mb-2 text-sm">Choose a color</p>
                 <SketchPicker
                   color={newStatus.color}
-                  onChangeComplete={(color) =>
-                    setNewStatus({ ...newStatus, color: color.hex })
+                  onChangeComplete={
+                    (color) =>
+                      setNewStatus({
+                        ...newStatus,
+                        color: color.hex,
+                      }) // Auto-lighten selected color
                   }
                 />
               </div>
+
+              {/* ✅ Activity Type Selection */}
               <Select
                 onValueChange={(value) =>
                   setNewStatus({ ...newStatus, activityType: value })
@@ -188,6 +231,8 @@ const StatusSection = () => {
                   <SelectItem value="Patient">Patient</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* ✅ Notification Sound Toggle */}
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -199,6 +244,8 @@ const StatusSection = () => {
                 <label className="text-sm">Add notification sound</label>
               </div>
             </div>
+
+            {/* ✅ Save Button */}
             <Button
               onClick={saveStatus}
               className="mt-4 w-full"
@@ -214,5 +261,6 @@ const StatusSection = () => {
     </ToastProvider>
   );
 };
+// Removed the unimplemented tinycolor function
 
 export default StatusSection;

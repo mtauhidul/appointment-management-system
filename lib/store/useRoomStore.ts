@@ -6,15 +6,20 @@ interface RoomStore {
   addRoom: (room: Room) => void;
   updateRoom: (id: string, updates: Partial<Room>) => void;
   deleteRoom: (id: string) => void;
-  assignDoctorToRoom: (roomId: string, doctorName: string) => void;
-  removeDoctorFromRoom: (roomId: string, doctorName: string) => void;
+  assignDoctorToRoom: (roomId: string, doctorId: string) => void;
+  removeDoctorFromRoom: (roomId: string, doctorId: string) => void;
 }
 
 export const useRoomStore = create<RoomStore>((set) => ({
   rooms: [],
 
-  addRoom: (room) => set((state) => ({ rooms: [...state.rooms, room] })),
+  // ✅ Add a new room
+  addRoom: (room) =>
+    set((state) => ({
+      rooms: [...state.rooms, room],
+    })),
 
+  // ✅ Update a room's properties
   updateRoom: (id, updates) =>
     set((state) => ({
       rooms: state.rooms.map((room) =>
@@ -22,28 +27,36 @@ export const useRoomStore = create<RoomStore>((set) => ({
       ),
     })),
 
+  // ✅ Delete a room by ID
   deleteRoom: (id) =>
     set((state) => ({
       rooms: state.rooms.filter((room) => room.id !== id),
     })),
 
-  assignDoctorToRoom: (roomId, doctorName) =>
+  // ✅ Assign a doctor to a room using doctor ID (prevents duplicates)
+  assignDoctorToRoom: (roomId, doctorId) =>
     set((state) => ({
       rooms: state.rooms.map((room) =>
-        room.id === roomId && !room.doctorsAssigned.includes(doctorName)
-          ? { ...room, doctorsAssigned: [...room.doctorsAssigned, doctorName] }
+        room.id === roomId
+          ? {
+              ...room,
+              doctorsAssigned: Array.from(
+                new Set([...room.doctorsAssigned, doctorId])
+              ),
+            }
           : room
       ),
     })),
 
-  removeDoctorFromRoom: (roomId, doctorName) =>
+  // ✅ Remove a doctor from a room using doctor ID
+  removeDoctorFromRoom: (roomId, doctorId) =>
     set((state) => ({
       rooms: state.rooms.map((room) =>
         room.id === roomId
           ? {
               ...room,
               doctorsAssigned: room.doctorsAssigned.filter(
-                (doc) => doc !== doctorName
+                (id) => id !== doctorId
               ),
             }
           : room

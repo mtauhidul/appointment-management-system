@@ -18,9 +18,11 @@ interface DoctorStore {
 export const useDoctorStore = create<DoctorStore>((set) => ({
   doctors: [],
 
+  // ✅ Add a new doctor
   addDoctor: (doctor) =>
     set((state) => ({ doctors: [...state.doctors, doctor] })),
 
+  // ✅ Update doctor details
   updateDoctor: (id, updates) =>
     set((state) => ({
       doctors: state.doctors.map((doc) =>
@@ -28,9 +30,11 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
       ),
     })),
 
+  // ✅ Delete a doctor (Removes assigned rooms)
   deleteDoctor: (id) => {
     const { updateRoom } = useRoomStore.getState();
 
+    // Remove doctor from all rooms before deleting
     useRoomStore.getState().rooms.forEach((room) => {
       if (room.doctorsAssigned.includes(id)) {
         updateRoom(room.id, {
@@ -44,6 +48,7 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
     }));
   },
 
+  // ✅ Assign a room to a doctor (Only using IDs)
   assignRoom: (doctorId, roomId) =>
     set((state) => ({
       doctors: state.doctors.map((doc) =>
@@ -53,6 +58,7 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
       ),
     })),
 
+  // ✅ Remove a room assignment from a doctor
   removeRoomAssignment: (doctorId, roomId) =>
     set((state) => ({
       doctors: state.doctors.map((doc) =>
@@ -65,6 +71,7 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
       ),
     })),
 
+  // ✅ Assign a patient to a doctor
   assignPatient: (doctorId, patientId) =>
     set((state) => ({
       doctors: state.doctors.map((doc) =>
@@ -74,6 +81,7 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
       ),
     })),
 
+  // ✅ Remove a patient from a doctor
   removePatient: (doctorId, patientId) =>
     set((state) => ({
       doctors: state.doctors.map((doc) =>
@@ -86,6 +94,7 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
       ),
     })),
 
+  // ✅ Assign an assistant to a doctor (Only using IDs, prevents duplicates)
   assignAssistant: (doctorId, assistantId) =>
     set((state) => ({
       doctors: state.doctors.map((doc) =>
@@ -94,12 +103,13 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
               ...doc,
               assistantsAssigned: Array.from(
                 new Set([...doc.assistantsAssigned, assistantId])
-              ), // Ensure unique assistants
+              ), // Prevent duplicates
             }
           : doc
       ),
     })),
 
+  // ✅ Remove an assistant from a doctor
   removeAssistant: (doctorId, assistantId) =>
     set((state) => ({
       doctors: state.doctors.map((doc) =>

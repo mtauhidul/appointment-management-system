@@ -11,22 +11,25 @@ interface ReceptionistStore {
 export const useReceptionistStore = create<ReceptionistStore>((set) => ({
   receptionists: [],
 
-  addReceptionist: (receptionist: Receptionist) =>
-    set((state: ReceptionistStore) => ({
-      receptionists: [...state.receptionists, receptionist],
-    })),
+  // ✅ Add a new receptionist (Prevents duplicates)
+  addReceptionist: (receptionist) =>
+    set((state) => {
+      if (state.receptionists.some((r) => r.id === receptionist.id))
+        return state; // Prevents duplicate IDs
+      return { receptionists: [...state.receptionists, receptionist] };
+    }),
 
-  updateReceptionist: (id: string, updates: Partial<Receptionist>) =>
-    set((state: ReceptionistStore) => ({
-      receptionists: state.receptionists.map((receptionist: Receptionist) =>
-        receptionist.id === id ? { ...receptionist, ...updates } : receptionist
+  // ✅ Update an existing receptionist
+  updateReceptionist: (id, updates) =>
+    set((state) => ({
+      receptionists: state.receptionists.map((r) =>
+        r.id === id ? { ...r, ...updates } : r
       ),
     })),
 
-  deleteReceptionist: (id: string) =>
-    set((state: ReceptionistStore) => ({
-      receptionists: state.receptionists.filter(
-        (receptionist: Receptionist) => receptionist.id !== id
-      ),
+  // ✅ Delete a receptionist by ID
+  deleteReceptionist: (id) =>
+    set((state) => ({
+      receptionists: state.receptionists.filter((r) => r.id !== id),
     })),
 }));

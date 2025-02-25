@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,7 +23,7 @@ import { useState } from "react";
 const AssistantsList = () => {
   const { assistants, addAssistant, updateAssistant, deleteAssistant } =
     useAssistantStore();
-  const { doctors } = useDoctorStore();
+  const { doctors, assignAssistant, removeAssistant } = useDoctorStore();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -54,17 +56,37 @@ const AssistantsList = () => {
         ...newAssistant,
         doctorsAssigned: newAssistant.doctorsAssigned.filter((id) =>
           doctors.some((doctor) => doctor.id === id)
-        ), // Only keep valid doctor IDs
+        ), // ✅ Only keep valid doctor IDs
       });
+
+      // ✅ Update assistant assignments in doctors
+      doctors.forEach((doctor) => {
+        if (doctor.assistantsAssigned.includes(selectedAssistant.id)) {
+          if (!newAssistant.doctorsAssigned.includes(doctor.id)) {
+            removeAssistant(doctor.id, selectedAssistant.id);
+          }
+        }
+        if (newAssistant.doctorsAssigned.includes(doctor.id)) {
+          assignAssistant(doctor.id, selectedAssistant.id);
+        }
+      });
+
       toast({
         title: "Assistant Updated",
         description: `${newAssistant.name} has been updated.`,
       });
     } else {
+      const newAssistantId = Math.random().toString(36).substr(2, 9);
       addAssistant({
-        id: Math.random().toString(36).substr(2, 9),
+        id: newAssistantId,
         ...newAssistant,
       });
+
+      // ✅ Assign assistant to doctors
+      doctors.forEach((doctor) => {
+        assignAssistant(doctor.id, newAssistantId);
+      });
+
       toast({
         title: "Assistant Added",
         description: `${newAssistant.name} has been added.`,
@@ -148,6 +170,7 @@ const AssistantsList = () => {
         })}
       </div>
 
+      {/* ✅ Dialog for Adding or Editing Assistants */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -180,6 +203,7 @@ const AssistantsList = () => {
               }
             />
 
+            {/* ✅ Assign Doctors using DropdownMenu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full text-left">

@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,10 +18,10 @@ import { useEffect, useState } from "react";
 const DoctorsList = () => {
   const { doctors, addDoctor, updateDoctor, deleteDoctor } = useDoctorStore();
   const { assistants } = useAssistantStore();
-  const [isUpdating, setIsUpdating] = useState(false);
   const { rooms } = useRoomStore(); // ✅ Get updated rooms from store
   const { toast } = useToast();
 
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<{ id: string } | null>(
     null
@@ -31,14 +33,15 @@ const DoctorsList = () => {
     specialty: "",
   });
 
+  // ✅ Ensure doctors have correct room assignments by using **room IDs**
   useEffect(() => {
     if (isUpdating) return;
-
     setIsUpdating(true);
+
     doctors.forEach((doctor) => {
       const assignedRoomIds = rooms
         .filter((room) => room.doctorsAssigned.includes(doctor.id))
-        .map((room) => room.number.toString());
+        .map((room) => room.id); // ✅ Use room.id instead of room.number
 
       if (
         JSON.stringify(doctor.roomsAssigned.sort()) !==
@@ -47,8 +50,9 @@ const DoctorsList = () => {
         updateDoctor(doctor.id, { roomsAssigned: assignedRoomIds });
       }
     });
+
     setIsUpdating(false);
-  }, [rooms]);
+  }, [rooms, doctors, updateDoctor, isUpdating]);
 
   const handleSaveDoctor = () => {
     if (
@@ -75,7 +79,7 @@ const DoctorsList = () => {
       addDoctor({
         id: Math.random().toString(36).substr(2, 9),
         ...newDoctor,
-        roomsAssigned: [],
+        roomsAssigned: [], // ✅ Ensure proper initialization
         assistantsAssigned: [],
         patients: [],
       });
@@ -89,10 +93,6 @@ const DoctorsList = () => {
     setSelectedDoctor(null);
     setNewDoctor({ name: "", email: "", phone: "", specialty: "" });
   };
-
-  useEffect(() => {
-    console.log("DoctorsList rendered", doctors);
-  }, [doctors]);
 
   return (
     <div className="space-y-4">
@@ -138,8 +138,13 @@ const DoctorsList = () => {
               <p className="text-sm text-gray-700">
                 <span className="font-medium">Assigned Rooms:</span>{" "}
                 <span className="text-gray-500">
-                  {doctor.roomsAssigned.length
-                    ? doctor.roomsAssigned.join(", ")
+                  {doctor.roomsAssigned.length > 0
+                    ? doctor.roomsAssigned
+                        .map(
+                          (roomId) => rooms.find((r) => r.id === roomId)?.number
+                        )
+                        .filter(Boolean) // ✅ Only show existing room numbers
+                        .join(", ")
                     : "None"}
                 </span>
               </p>
@@ -175,6 +180,7 @@ const DoctorsList = () => {
         })}
       </div>
 
+      {/* ✅ Dialog for Adding or Editing Doctor */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
