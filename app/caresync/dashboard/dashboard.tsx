@@ -49,13 +49,6 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [rooms]);
 
-  // Toggle Emergency Mode
-  const handleToggleEmergency = (roomId: string) => {
-    updateRoom(roomId, {
-      isEmergency: !rooms.find((room) => room.id === roomId)?.isEmergency,
-    });
-  };
-
   // Reset Room
   const handleRoomReset = (roomId: string) => {
     updateRoom(roomId, {
@@ -78,14 +71,50 @@ const Dashboard = () => {
       .forEach((room) => handleRoomReset(room.id));
   };
 
-  // Update Room Status
+  // ✅ Function to play notification sound
+  const playNotificationSound = () => {
+    const audio = new Audio("/sounds/beep.mp3"); // Ensure this file exists
+    audio.play().catch((err) => console.error("Audio play failed:", err));
+  };
+
+  // ✅ Function to play emergency sound
+  const playEmergencySound = () => {
+    const audio = new Audio("/sounds/emergency.mp3"); // Ensure this file exists
+    audio.play().catch((err) => console.error("Audio play failed:", err));
+  };
+
+  // ✅ Update Room Status and trigger sound if needed
   const handleUpdateStatus = (roomId: string, newStatus: string) => {
+    const statusObj = statuses.find((s) => s.name === newStatus);
+
     updateRoom(roomId, {
       status: newStatus,
       isEmergency: false,
       statusTime: new Date(),
       statusOrder: rooms.filter((room) => room.status === newStatus).length + 1,
     });
+
+    // 🔊 Play sound if status has `hasSound: true`
+    if (statusObj?.hasSound) {
+      playNotificationSound();
+    }
+  };
+
+  // ✅ Toggle Emergency Mode and trigger emergency sound
+  const handleToggleEmergency = (roomId: string) => {
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    const newEmergencyState = !room.isEmergency;
+
+    updateRoom(roomId, {
+      isEmergency: newEmergencyState,
+    });
+
+    // 🔊 Play emergency sound when activated
+    if (newEmergencyState) {
+      playEmergencySound();
+    }
   };
 
   // Update Patient Count
@@ -234,7 +263,7 @@ const Dashboard = () => {
                             className="mt-2 px-2 py-1 text-xs rounded-full bg-white shadow-md font-semibold text-gray-800 flex items-center"
                           >
                             {statusOrder > 0 && (
-                              <span className="text-white font-bold bg-blue-600 w-5 h-5 flex items-center justify-center rounded-full shadow-lg text-xs mr-1 -ml-1">
+                              <span className="text-white font-bold bg-blue-600 w-5 h-5 flex items-center justify-center rounded-full shadow-lg text-xs -ml-1">
                                 {statusOrder}
                               </span>
                             )}
