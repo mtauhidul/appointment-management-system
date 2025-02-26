@@ -1,8 +1,21 @@
 "use client";
 
+import { ChevronDown, FileText, Info, Upload } from "lucide-react";
+import Papa from "papaparse";
+import { useState } from "react";
+import * as XLSX from "xlsx";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -14,18 +27,16 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Upload } from "lucide-react";
-import Papa from "papaparse";
-import { useState } from "react";
-import * as XLSX from "xlsx";
 
 const PatientsSection = () => {
   const [files, setFiles] = useState<FileData[]>([]);
-  const [selectedFileData, setSelectedFileData] = useState<
-    FileData["content"] | null
-  >(null);
+  const [selectedFileData, setSelectedFileData] = useState<FileData | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(false);
 
   interface FileData {
     id: number;
@@ -38,37 +49,44 @@ const PatientsSection = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ): Promise<void> => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (
-        !file.name.endsWith(".csv") &&
-        !file.name.endsWith(".xlsx") &&
-        !file.name.endsWith(".xls")
-      ) {
-        alert("Invalid file format. Please upload a CSV or Excel file.");
-        return;
+    if (!file) return;
+
+    if (
+      !file.name.endsWith(".csv") &&
+      !file.name.endsWith(".xlsx") &&
+      !file.name.endsWith(".xls")
+    ) {
+      alert("Invalid file format. Please upload a CSV or Excel file.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    const newFile: FileData = {
+      id: Date.now(),
+      name: file.name,
+      date: new Date().toLocaleDateString(),
+      content: [],
+    };
+
+    try {
+      if (file.name.endsWith(".csv")) {
+        const parsedData = await parseCSV(file);
+        newFile.content = parsedData;
+      } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        const parsedData = await parseExcel(file);
+        newFile.content = parsedData;
       }
 
-      const newFile: FileData = {
-        id: Date.now(),
-        name: file.name,
-        date: new Date().toLocaleDateString(),
-        content: [],
-      };
-
-      try {
-        if (file.name.endsWith(".csv")) {
-          const parsedData = await parseCSV(file);
-          newFile.content = parsedData;
-        } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-          const parsedData = await parseExcel(file);
-          newFile.content = parsedData;
-        }
-
-        setFiles((prevFiles) => [...prevFiles, newFile]);
-      } catch (error) {
-        console.error("Error parsing file:", error);
-        alert("Error parsing file. Please ensure it is properly formatted.");
-      }
+      setFiles((prevFiles) => [...prevFiles, newFile]);
+      setSelectedFileData(newFile);
+    } catch (error) {
+      console.error("Error parsing file:", error);
+      alert("Error parsing file. Please ensure it is properly formatted.");
+    } finally {
+      setIsLoading(false);
+      // Reset input value to allow uploading the same file again
+      event.target.value = "";
     }
   };
 
@@ -121,104 +139,230 @@ const PatientsSection = () => {
   };
 
   const handleFileClick = (file: FileData) => {
-    setSelectedFileData(file.content);
+    setSelectedFileData(file);
   };
 
-  return (
-    <div className="p-4 sm:p-6 space-y-6 bg-gray-50 min-h-screen">
-      <h1 className="text-xl sm:text-2xl font-semibold text-center sm:text-left">
-        Upload Your Patients Information
-      </h1>
+  const getFileTypeColor = (fileName: string) => {
+    if (fileName.endsWith(".csv")) return "bg-green-100 text-green-800";
+    if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls"))
+      return "bg-blue-100 text-blue-800";
+    return "bg-gray-100 text-gray-800";
+  };
 
-      {/* Upload Section */}
-      <div className="flex flex-col sm:flex-row items-center gap-4">
+  const getFileExtension = (fileName: string) => {
+    return fileName.split(".").pop()?.toUpperCase() || "";
+  };
+
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed rounded-lg text-gray-500 bg-gray-50">
+      <FileText className="h-12 w-12 mb-4 text-gray-400" />
+      <h3 className="text-lg font-medium mb-2">No files uploaded yet</h3>
+      <p className="text-sm text-center mb-4">
+        Upload your first patient data file to get started
+      </p>
+      <label htmlFor="file-upload" className="cursor-pointer">
+        <span className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">
+          <Upload className="mr-2 h-4 w-4" /> Browse Files
+        </span>
         <Input
+          id="file-upload"
           type="file"
           accept=".csv,.xlsx,.xls"
           onChange={handleFileUpload}
-          className="w-full sm:flex-1 text-sm"
+          className="hidden"
         />
-        <Button className="w-full sm:w-auto text-sm">
-          <Upload className="mr-2 h-4 w-4" /> Import File
-        </Button>
-      </div>
+      </label>
+    </div>
+  );
 
-      {/* File List */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {files.map((file) => (
-          <Tooltip key={file.id}>
-            <TooltipTrigger>
-              <Card
-                className="p-3 sm:p-4 cursor-pointer hover:shadow-lg"
-                onClick={() => handleFileClick(file)}
-              >
-                <h3
-                  className="font-bold text-sm sm:text-lg truncate"
-                  title={file.name}
-                >
-                  {file.name}
-                </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Uploaded: {file.date}
-                </p>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Rows: {file.content.length}</p>
-              <p>Columns: {Object.keys(file.content[0] || {}).length}</p>
-            </TooltipContent>
-          </Tooltip>
-        ))}
-      </div>
+  return (
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-semibold">Patient Records</h1>
 
-      {/* Selected File Data Table */}
-      {selectedFileData && (
-        <Card className="p-3 sm:p-4">
-          <h2 className="text-lg font-medium mb-3 sm:mb-4 text-center sm:text-left">
-            File Data
-          </h2>
-          <div className="overflow-x-auto rounded-lg border">
-            <Table className="min-w-full table-fixed text-xs sm:text-sm">
-              <TableHeader className="bg-gray-100">
-                <TableRow>
-                  {Object.keys(selectedFileData[0] || {}).map((key) => (
-                    <TableHead
-                      key={key}
-                      className="sticky top-0 p-2 sm:p-3 text-left font-medium whitespace-nowrap bg-gray-100"
-                    >
-                      {key}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {selectedFileData.map((row, index) => (
-                  <TableRow
-                    key={index}
-                    className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}
-                  >
-                    {Object.values(row).map((value, cellIndex) => (
-                      <TableCell
-                        key={cellIndex}
-                        className="p-2 sm:p-3 text-left max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap"
-                      >
-                        {value}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 min-w-0">
+            <label
+              htmlFor="upload-patients-file"
+              className="flex items-center justify-center w-full px-4 py-2 border border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
+            >
+              <Upload className="mr-2 h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium">Upload File</span>
+              <Input
+                id="upload-patients-file"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileUpload}
+                className="sr-only"
+              />
+            </label>
           </div>
-        </Card>
-      )}
 
-      {!files.length && (
-        <div className="text-center mt-6">
-          <p className="text-red-500 text-sm sm:text-base">
-            No files uploaded yet.
-          </p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Sort by name</DropdownMenuItem>
+              <DropdownMenuItem>Sort by date</DropdownMenuItem>
+              <DropdownMenuItem>Clear all files</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <>
+          {files.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {/* File Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <TooltipProvider>
+                  {files.map((file) => (
+                    <Tooltip key={file.id}>
+                      <TooltipTrigger asChild>
+                        <Card
+                          className={`overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            selectedFileData?.id === file.id
+                              ? "ring-2 ring-primary"
+                              : ""
+                          }`}
+                          onClick={() => handleFileClick(file)}
+                        >
+                          <div className="p-4 flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge
+                                  className={getFileTypeColor(file.name)}
+                                  variant="outline"
+                                >
+                                  {getFileExtension(file.name)}
+                                </Badge>
+                              </div>
+                              <h3
+                                className="font-medium text-sm truncate"
+                                title={file.name}
+                              >
+                                {file.name}
+                              </h3>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {file.date} • {file.content.length} records
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <div className="text-xs">
+                          <p>
+                            <strong>File:</strong> {file.name}
+                          </p>
+                          <p>
+                            <strong>Rows:</strong> {file.content.length}
+                          </p>
+                          <p>
+                            <strong>Columns:</strong>{" "}
+                            {Object.keys(file.content[0] || {}).length}
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+              </div>
+
+              {/* Selected File Data Table */}
+              {selectedFileData?.content &&
+                selectedFileData.content.length > 0 && (
+                  <Card className="mt-6">
+                    <CardHeader className="pb-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h2 className="text-lg font-medium flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                            {selectedFileData.name}
+                          </h2>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedFileData.content.length} rows •{" "}
+                            {
+                              Object.keys(selectedFileData.content[0] || {})
+                                .length
+                            }{" "}
+                            columns
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm">
+                            Export
+                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Info className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View detailed information about this file</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <ScrollArea className="h-[500px] rounded-md border">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/50">
+                                {Object.keys(
+                                  selectedFileData.content[0] || {}
+                                ).map((key) => (
+                                  <TableHead
+                                    key={key}
+                                    className="p-3 text-xs font-medium text-muted-foreground whitespace-nowrap"
+                                  >
+                                    {key}
+                                  </TableHead>
+                                ))}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {selectedFileData.content.map((row, index) => (
+                                <TableRow
+                                  key={index}
+                                  className="hover:bg-muted/50 transition-colors"
+                                >
+                                  {Object.values(row).map(
+                                    (value, cellIndex) => (
+                                      <TableCell
+                                        key={cellIndex}
+                                        className="p-3 text-sm max-w-[200px] truncate"
+                                        title={String(value)}
+                                      >
+                                        {value}
+                                      </TableCell>
+                                    )
+                                  )}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
