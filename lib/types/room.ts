@@ -3,9 +3,12 @@ export interface Room {
   number: number;
   doctorsAssigned: string[];
   patientAssigned?: string;
-  status: string;
+  doctorStatuses: {
+    [doctorId: string]: {
+      status: string;
+      statusOrder: number;
+      statusTime: number;
+    };
+  };
   isEmergency: boolean;
-  color: string;
-  statusTime: Date;
-  statusOrder: number;
 }

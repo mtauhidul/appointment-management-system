@@ -16,6 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import useLoadDummyData from "@/hooks/useLoadDymmyData";
 import {
   ChartNoAxesCombined,
   Layers,
@@ -37,6 +38,7 @@ export default function Caresync() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSection = searchParams.get("section");
+  useLoadDummyData();
 
   const [section, setSection] = useState<string>(() => {
     return (

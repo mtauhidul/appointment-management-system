@@ -1,0 +1,92 @@
+{
+  "doctors": [
+    {
+      "id": "doc-1",
+      "name": "Dr. John Doe",
+      "email": "johndoe@example.com",
+      "phone": "+1234567890",
+      "specialty": "Cardiologist",
+      "patients": [],
+      "roomsAssigned": ["room-1", "room-2"],
+      "assistantsAssigned": ["assistant-1"]
+    },
+    {
+      "id": "doc-2",
+      "name": "Dr. Jane Smith",
+      "email": "janesmith@example.com",
+      "phone": "+1987654321",
+      "specialty": "Neurologist",
+      "patients": [],
+      "roomsAssigned": ["room-2", "room-3"],
+      "assistantsAssigned": ["assistant-2"]
+    }
+  ],
+  "rooms": [
+    {
+      "id": "room-1",
+      "number": 101,
+      "doctorStatuses": {},
+      "isEmergency": false,
+      "doctorsAssigned": ["doc-1"]
+    },
+    {
+      "id": "room-2",
+      "number": 102,
+      "doctorStatuses": {},
+      "isEmergency": false,
+      "doctorsAssigned": ["doc-1", "doc-2"]
+    },
+    {
+      "id": "room-3",
+      "number": 103,
+      "doctorStatuses": {},
+      "isEmergency": false,
+      "doctorsAssigned": ["doc-2"]
+    }
+  ],
+  "assistants": [
+    {
+      "id": "assistant-1",
+      "name": "Alice Johnson",
+      "email": "alice@example.com",
+      "phone": "+1222333444"
+    },
+    {
+      "id": "assistant-2",
+      "name": "Bob Brown",
+      "email": "bob@example.com",
+      "phone": "+1555666777"
+    }
+  ],
+  "receptionists": [
+    {
+      "id": "receptionist-1",
+      "name": "Charlie Davis",
+      "email": "charlie@example.com",
+      "phone": "+1888999000"
+    }
+  ],
+  "statuses": [
+    {
+      "id": "status-1",
+      "name": "Critical",
+      "color": "#ff6b6b",
+      "hasSound": true,
+      "activityType": "Patient"
+    },
+    {
+      "id": "status-2",
+      "name": "Stable",
+      "color": "#6bd66b",
+      "hasSound": false,
+      "activityType": "Doctor"
+    },
+    {
+      "id": "status-3",
+      "name": "Observation",
+      "color": "#6b9bd6",
+      "hasSound": false,
+      "activityType": "Staff"
+    }
+  ]
+}

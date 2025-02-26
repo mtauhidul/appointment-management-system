@@ -18,7 +18,7 @@ const Dashboard = () => {
   const { rooms, updateRoom } = useRoomStore();
   const { statuses } = useStatusStore();
 
-  // Generate a map of status colors dynamically from store
+  // ✅ Generate a map of status colors dynamically from store
   const statusColors = statuses.reduce(
     (acc: { [key: string]: string }, status) => {
       acc[status.name] = status.color || "#e5e7eb"; // Default light gray
@@ -27,40 +27,60 @@ const Dashboard = () => {
     {}
   );
 
-  // Timer state to track elapsed time
-  const [timers, setTimers] = useState<{ [key: string]: number }>({});
+  // ✅ Timer state to track elapsed time for each doctor’s assigned rooms
+  const [timers, setTimers] = useState<{
+    [key: string]: { [doctorId: string]: number };
+  }>({});
 
   useEffect(() => {
     const interval = setInterval(() => {
       setTimers((prev) => {
         const newTimers = { ...prev };
+
         rooms.forEach((room) => {
-          if (room.status !== "Empty") {
-            newTimers[room.id] = Math.floor(
-              (Date.now() - new Date(room.statusTime).getTime()) / 1000
-            );
-          } else {
-            newTimers[room.id] = 0;
-          }
+          Object.keys(room.doctorStatuses || {}).forEach((doctorId) => {
+            if (room.doctorStatuses[doctorId].status !== "Empty") {
+              newTimers[room.id] = {
+                ...newTimers[room.id],
+                [doctorId]: Math.floor(
+                  (Date.now() -
+                    new Date(
+                      room.doctorStatuses[doctorId].statusTime
+                    ).getTime()) /
+                    1000
+                ),
+              };
+            } else {
+              newTimers[room.id] = { ...newTimers[room.id], [doctorId]: 0 };
+            }
+          });
         });
+
         return newTimers;
       });
     }, 1000);
+
     return () => clearInterval(interval);
   }, [rooms]);
 
-  // Reset Room
-  const handleRoomReset = (roomId: string) => {
+  // ✅ Reset Room (specific to doctor)
+  const handleRoomReset = (roomId: string, doctorId: string) => {
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
     updateRoom(roomId, {
-      status: "Empty",
-      isEmergency: false,
-      patientAssigned: undefined,
-      statusTime: new Date(0),
-      statusOrder: 0,
+      doctorStatuses: {
+        ...room.doctorStatuses,
+        [doctorId]: {
+          status: "Empty",
+          statusOrder: 0,
+          statusTime: 0,
+        },
+      },
     });
   };
 
-  // Reset all rooms under a doctor
+  // ✅ Reset all rooms under a specific doctor
   const handleResetAllRooms = (doctorId: string) => {
     rooms
       .filter((room) =>
@@ -68,34 +88,50 @@ const Dashboard = () => {
           .find((doc) => doc.id === doctorId)
           ?.roomsAssigned.includes(room.id)
       )
-      .forEach((room) => handleRoomReset(room.id));
+      .forEach((room) => handleRoomReset(room.id, doctorId));
   };
 
-  // ✅ Function to play notification sound
+  // ✅ Function to play notification sound when a status with sound is applied
   const playNotificationSound = () => {
-    const audio = new Audio("/sounds/beep.mp3"); // Ensure this file exists
+    const audio = new Audio("/sounds/beep.mp3"); // Ensure file exists
     audio.play().catch((err) => console.error("Audio play failed:", err));
   };
 
   // ✅ Function to play emergency sound
   const playEmergencySound = () => {
-    const audio = new Audio("/sounds/emergency.mp3"); // Ensure this file exists
+    const audio = new Audio("/sounds/emergency.mp3"); // Ensure file exists
     audio.play().catch((err) => console.error("Audio play failed:", err));
   };
 
-  // ✅ Update Room Status and trigger sound if needed
-  const handleUpdateStatus = (roomId: string, newStatus: string) => {
-    const statusObj = statuses.find((s) => s.name === newStatus);
+  // ✅ Update Room Status and trigger sound if needed (specific to doctor)
+  const handleUpdateStatus = (
+    roomId: string,
+    doctorId: string,
+    newStatus: string
+  ) => {
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    const updatedDoctorStatuses = {
+      ...room.doctorStatuses,
+      [doctorId]: {
+        status: newStatus,
+        statusOrder:
+          Object.values(room.doctorStatuses || {}).filter(
+            (ds) => ds.status === newStatus
+          ).length + 1,
+        statusTime: Date.now(),
+      },
+    };
 
     updateRoom(roomId, {
-      status: newStatus,
-      isEmergency: false,
-      statusTime: new Date(),
-      statusOrder: rooms.filter((room) => room.status === newStatus).length + 1,
+      ...room,
+      doctorStatuses: updatedDoctorStatuses,
     });
 
-    // 🔊 Play sound if status has `hasSound: true`
-    if (statusObj?.hasSound) {
+    // ✅ Check if the new status requires sound
+    const statusObject = statuses.find((s) => s.name === newStatus);
+    if (statusObject?.hasSound) {
       playNotificationSound();
     }
   };
@@ -111,13 +147,13 @@ const Dashboard = () => {
       isEmergency: newEmergencyState,
     });
 
-    // 🔊 Play emergency sound when activated
+    // 🔊 Play emergency sound **only when activated**
     if (newEmergencyState) {
       playEmergencySound();
     }
   };
 
-  // Update Patient Count
+  // ✅ Update Patient Count (specific to doctor)
   const handlePatientCountChange = (doctorId: string, count: number) => {
     const doctor = doctors.find((doc) => doc.id === doctorId);
     if (!doctor) return;
@@ -189,22 +225,35 @@ const Dashboard = () => {
             {rooms
               .filter((room) => doctor.roomsAssigned.includes(room.id))
               .map((room) => {
+                const doctorRoomData = room.doctorStatuses?.[doctor.id] || {
+                  status: "Empty",
+                  statusOrder: 0,
+                  statusTime: 0,
+                };
+
                 const roomColor = room.isEmergency
                   ? "#ffcccc"
-                  : statusColors[room.status] || "#f3f4f6";
+                  : statusColors[doctorRoomData.status] || "#f3f4f6";
                 const borderColor = room.isEmergency
                   ? "#ff0000"
-                  : statusColors[room.status] || "#d1d5db";
+                  : statusColors[doctorRoomData.status] || "#d1d5db";
 
-                // Find the order of this room within its status group
+                // Find the order of this room within its status group for the specific doctor
                 const statusRooms = rooms
                   .filter(
-                    (r) => r.status === room.status && r.status !== "Empty"
+                    (r) =>
+                      r.doctorStatuses?.[doctor.id]?.status ===
+                        doctorRoomData.status &&
+                      r.doctorStatuses?.[doctor.id]?.status !== "Empty"
                   )
                   .sort(
                     (a, b) =>
-                      new Date(a.statusTime).getTime() -
-                      new Date(b.statusTime).getTime()
+                      new Date(
+                        a.doctorStatuses?.[doctor.id]?.statusTime || 0
+                      ).getTime() -
+                      new Date(
+                        b.doctorStatuses?.[doctor.id]?.statusTime || 0
+                      ).getTime()
                   );
 
                 const statusOrder =
@@ -229,7 +278,7 @@ const Dashboard = () => {
                       <div className="flex space-x-2">
                         {/* Emergency Button */}
                         <Button
-                          disabled={room.status === "Empty"}
+                          disabled={doctorRoomData.status === "Empty"}
                           variant="ghost"
                           size="sm"
                           onClick={() => handleToggleEmergency(room.id)}
@@ -244,10 +293,13 @@ const Dashboard = () => {
 
                         {/* Reset Button */}
                         <Button
-                          disabled={room.status === "Empty" || room.isEmergency}
+                          disabled={
+                            doctorRoomData.status === "Empty" ||
+                            room.isEmergency
+                          }
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRoomReset(room.id)}
+                          onClick={() => handleRoomReset(room.id, doctor.id)}
                         >
                           <RotateCcw className="w-4 h-4 text-gray-500" />
                         </Button>
@@ -267,7 +319,7 @@ const Dashboard = () => {
                                 {statusOrder}
                               </span>
                             )}
-                            {room.status}
+                            {doctorRoomData.status}
                           </Button>
                         </div>
                       </PopoverTrigger>
@@ -279,7 +331,11 @@ const Dashboard = () => {
                               size="sm"
                               className="w-full text-left hover:bg-gray-100 text-sm"
                               onClick={() =>
-                                handleUpdateStatus(room.id, status.name)
+                                handleUpdateStatus(
+                                  room.id,
+                                  doctor.id,
+                                  status.name
+                                )
                               }
                             >
                               {status.name}
@@ -298,9 +354,10 @@ const Dashboard = () => {
                     <div className="mt-2 flex items-center space-x-1 text-xs">
                       <Clock className="w-4 h-4 text-gray-500" />
                       <span>
-                        {timers[room.id] !== undefined
-                          ? `${Math.floor(timers[room.id] / 60)}:${(
-                              timers[room.id] % 60
+                        {timers[room.id] &&
+                        timers[room.id][doctor.id] !== undefined
+                          ? `${Math.floor(timers[room.id][doctor.id] / 60)}:${(
+                              timers[room.id][doctor.id] % 60
                             )
                               .toString()
                               .padStart(2, "0")}`
