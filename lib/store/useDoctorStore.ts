@@ -1,4 +1,9 @@
-import { Doctor } from "@/lib/types";
+import {
+  Doctor,
+  DoctorAvailability,
+  TimeSlot,
+  createEmptyAvailability,
+} from "@/lib/types";
 import { create } from "zustand";
 import { useRoomStore } from "./useRoomStore";
 
@@ -13,14 +18,40 @@ interface DoctorStore {
   removePatient: (doctorId: string, patientId: string) => void;
   assignAssistant: (doctorId: string, assistantId: string) => void;
   removeAssistant: (doctorId: string, assistantId: string) => void;
+  // New availability methods
+  addTimeSlot: (
+    doctorId: string,
+    day: keyof DoctorAvailability,
+    timeSlot: TimeSlot
+  ) => void;
+  updateTimeSlot: (
+    doctorId: string,
+    day: keyof DoctorAvailability,
+    timeSlotId: string,
+    updates: Partial<TimeSlot>
+  ) => void;
+  removeTimeSlot: (
+    doctorId: string,
+    day: keyof DoctorAvailability,
+    timeSlotId: string
+  ) => void;
+  setAvailability: (doctorId: string, availability: DoctorAvailability) => void;
 }
 
 export const useDoctorStore = create<DoctorStore>((set) => ({
   doctors: [],
 
-  // ✅ Add a new doctor
+  // ✅ Add a new doctor with empty availability
   addDoctor: (doctor) =>
-    set((state) => ({ doctors: [...state.doctors, doctor] })),
+    set((state) => ({
+      doctors: [
+        ...state.doctors,
+        {
+          ...doctor,
+          availability: doctor.availability || createEmptyAvailability(),
+        },
+      ],
+    })),
 
   // ✅ Update doctor details
   updateDoctor: (id, updates) =>
@@ -119,6 +150,71 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
               assistantsAssigned: doc.assistantsAssigned.filter(
                 (aId) => aId !== assistantId
               ),
+            }
+          : doc
+      ),
+    })),
+
+  // ✅ Add a time slot to a specific day
+  addTimeSlot: (doctorId, day, timeSlot) =>
+    set((state) => ({
+      doctors: state.doctors.map((doc) =>
+        doc.id === doctorId
+          ? {
+              ...doc,
+              availability: {
+                ...doc.availability,
+                [day]: [...(doc.availability?.[day] || []), timeSlot],
+              },
+            }
+          : doc
+      ),
+    })),
+
+  // ✅ Update a specific time slot
+  updateTimeSlot: (doctorId, day, timeSlotId, updates) =>
+    set((state) => ({
+      doctors: state.doctors.map((doc) =>
+        doc.id === doctorId
+          ? {
+              ...doc,
+              availability: {
+                ...doc.availability,
+                [day]: (doc.availability?.[day] || []).map((slot) =>
+                  slot.id === timeSlotId ? { ...slot, ...updates } : slot
+                ),
+              },
+            }
+          : doc
+      ),
+    })),
+
+  // ✅ Remove a time slot
+  removeTimeSlot: (doctorId, day, timeSlotId) =>
+    set((state) => ({
+      doctors: state.doctors.map((doc) =>
+        doc.id === doctorId
+          ? {
+              ...doc,
+              availability: {
+                ...doc.availability,
+                [day]: (doc.availability?.[day] || []).filter(
+                  (slot) => slot.id !== timeSlotId
+                ),
+              },
+            }
+          : doc
+      ),
+    })),
+
+  // ✅ Set the entire availability schedule for a doctor
+  setAvailability: (doctorId, availability) =>
+    set((state) => ({
+      doctors: state.doctors.map((doc) =>
+        doc.id === doctorId
+          ? {
+              ...doc,
+              availability,
             }
           : doc
       ),
