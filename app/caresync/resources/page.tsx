@@ -189,7 +189,12 @@ const ResourcesSection = () => {
           />
 
           {/* ✅ Create New Room */}
-          <Button onClick={() => setIsDialogOpen(true)}>Create Room</Button>
+          <Button
+            disabled={selectedRooms.length > 0}
+            onClick={() => setIsDialogOpen(true)}
+          >
+            Create Room
+          </Button>
           <Button disabled={selectedRooms.length === 0} onClick={assignRooms}>
             Assign Rooms
           </Button>

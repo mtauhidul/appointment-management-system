@@ -112,42 +112,51 @@ const Dashboard = () => {
           key={doctor.id}
           className="space-y-4 bg-white p-4 rounded-lg shadow-lg"
         >
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold">{doctor.name}</h2>
-              <p className="text-sm text-primary">{doctor.specialty}</p>
+          <div className="flex flex-wrap items-center justify-between bg-white p-3 rounded-lg shadow-md gap-3 md:gap-6">
+            {/* Left Section: Doctor Name & Specialty */}
+            <div className="flex items-center gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {doctor.name}
+                </h2>
+                <p className="text-xs text-primary">{doctor.specialty}</p>
+              </div>
             </div>
+
+            {/* Middle Section: Compact Patient Counter */}
+            <div className="flex items-center bg-gray-50 p-2 rounded-lg shadow-inner gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handlePatientCountChange(doctor.id, -1)}
+                disabled={doctor.patients.length === 0}
+              >
+                <Minus className="w-4 h-4 text-red-500" />
+              </Button>
+              <span className="text-sm font-semibold">
+                {doctor.patients.length} Patients
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handlePatientCountChange(doctor.id, 1)}
+              >
+                <Plus className="w-4 h-4 text-green-500" />
+              </Button>
+            </div>
+
+            {/* Right Section: Reset Button */}
             <Button
               variant="outline"
               size="sm"
+              className="ml-auto"
               onClick={() => handleResetAllRooms(doctor.id)}
             >
-              Reset All Rooms
+              Reset Rooms
             </Button>
           </div>
 
-          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-inner">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handlePatientCountChange(doctor.id, -1)}
-              disabled={doctor.patients.length === 0}
-            >
-              <Minus className="w-5 h-5 text-red-500" />
-            </Button>
-            <span className="text-lg font-semibold">
-              {doctor.patients.length} Patients
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handlePatientCountChange(doctor.id, 1)}
-            >
-              <Plus className="w-5 h-5 text-green-500" />
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {rooms
               .filter((room) => doctor.roomsAssigned.includes(room.id))
               .map((room) => {
@@ -175,53 +184,57 @@ const Dashboard = () => {
                 return (
                   <div
                     key={room.id}
-                    className={`p-3 rounded-lg shadow-md flex flex-col items-center relative min-w-[170px] transition-all duration-300 ${
-                      room.isEmergency ? "animate-pulse" : ""
+                    className={`p-2 rounded-lg shadow-md flex flex-col items-center relative min-w-[160px] transition-all duration-300 ${
+                      room.isEmergency ? "animate-pulse bg-red-300" : "bg-white"
                     }`}
                     style={{
                       backgroundColor: roomColor,
-                      border: `2px solid ${borderColor}`,
+                      border: `1.5px solid ${borderColor}`,
                     }}
                   >
                     {/* Room Header */}
                     <div className="flex justify-between w-full">
-                      <span className="text-lg font-bold">{room.number}</span>
+                      <span className="text-md font-semibold">
+                        {room.number}
+                      </span>
                       <div className="flex space-x-2">
+                        {/* Emergency Button */}
                         <Button
                           disabled={room.status === "Empty"}
                           variant="ghost"
                           size="sm"
                           onClick={() => handleToggleEmergency(room.id)}
+                          className={`${
+                            room.isEmergency
+                              ? "animate-pulse text-red-500"
+                              : "text-gray-500"
+                          }`}
                         >
-                          <Bell
-                            className={`w-5 h-5 ${
-                              room.isEmergency
-                                ? "text-red-500"
-                                : "text-gray-500"
-                            }`}
-                          />
+                          <Bell className="w-4 h-4" />
                         </Button>
+
+                        {/* Reset Button */}
                         <Button
                           disabled={room.status === "Empty" || room.isEmergency}
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRoomReset(room.id)}
                         >
-                          <RotateCcw className="w-5 h-5 text-gray-500" />
+                          <RotateCcw className="w-4 h-4 text-gray-500" />
                         </Button>
                       </div>
                     </div>
 
-                    {/* Status */}
+                    {/* Status with Order Number */}
                     <Popover>
                       <PopoverTrigger asChild>
                         <div>
                           <Button
                             variant="outline"
-                            className="mt-2 px-3 py-1 text-sm rounded-full bg-white shadow-md font-semibold text-gray-800 flex items-center"
+                            className="mt-2 px-2 py-1 text-xs rounded-full bg-white shadow-md font-semibold text-gray-800 flex items-center"
                           >
                             {statusOrder > 0 && (
-                              <span className="text-white font-bold bg-blue-600 w-6 h-6 flex items-center justify-center rounded-full shadow-lg text-lg mr-1 -ml-1">
+                              <span className="text-white font-bold bg-blue-600 w-5 h-5 flex items-center justify-center rounded-full shadow-lg text-xs mr-1 -ml-1">
                                 {statusOrder}
                               </span>
                             )}
@@ -229,13 +242,13 @@ const Dashboard = () => {
                           </Button>
                         </div>
                       </PopoverTrigger>
-                      <PopoverContent className="p-3 bg-white shadow-lg rounded-lg space-y-2">
+                      <PopoverContent className="p-2 bg-white shadow-lg rounded-lg space-y-2">
                         {statuses.map((status) => (
                           <PopoverClose asChild key={status.id}>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="w-full text-left hover:bg-gray-100"
+                              className="w-full text-left hover:bg-gray-100 text-sm"
                               onClick={() =>
                                 handleUpdateStatus(room.id, status.name)
                               }
@@ -248,12 +261,12 @@ const Dashboard = () => {
                     </Popover>
 
                     {/* Patient Name */}
-                    <p className="text-sm text-gray-700 mt-2">
+                    <p className="text-xs text-gray-600 mt-1">
                       {room.patientAssigned || "No Patient"}
                     </p>
 
                     {/* Timer */}
-                    <div className="mt-3 flex items-center space-x-2 text-sm">
+                    <div className="mt-2 flex items-center space-x-1 text-xs">
                       <Clock className="w-4 h-4 text-gray-500" />
                       <span>
                         {timers[room.id] !== undefined
