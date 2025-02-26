@@ -1,7 +1,18 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
+import {
+  ChartNoAxesCombined,
+  Home,
+  Layers,
+  LayoutDashboard,
+  ShieldCheck,
+  SquareCheckBig,
+  Users,
+} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
+import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,16 +28,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import useLoadDummyData from "@/hooks/useLoadDymmyData";
-import {
-  ChartNoAxesCombined,
-  Layers,
-  LayoutDashboard,
-  ShieldCheck,
-  SquareCheckBig,
-  Users,
-} from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+
+// Import page components
 import Dashboard from "./dashboard/dashboard";
 import PatientsSection from "./patients/page";
 import Reports from "./reports/page";
@@ -38,33 +41,71 @@ export default function Caresync() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSection = searchParams.get("section");
+
+  // Load dummy data for development/demo
   useLoadDummyData();
 
-  const [section, setSection] = useState<string>(() => {
-    return (
-      urlSection || localStorage.getItem("caresync-section") || "Dashboard"
-    );
-  });
+  // Initialize section state from URL or localStorage or default to Dashboard
+  const [section, setSection] = useState<string>(
+    () => urlSection || localStorage.getItem("caresync-section") || "Dashboard"
+  );
 
+  // Sync section state with localStorage and URL
   useEffect(() => {
     localStorage.setItem("caresync-section", section);
-    router.replace(`?section=${section}`, { scroll: false }); // Update URL without reloading
+    router.replace(`?section=${section}`, { scroll: false });
   }, [section, router]);
 
+  // Memoize sidebar items to prevent unnecessary re-renders
   const sidebarItems = useMemo(
     () => [
-      { title: "Dashboard", icon: LayoutDashboard },
-      { title: "Patients", icon: Users },
-      { title: "Reports", icon: ChartNoAxesCombined },
-      { title: "Roles", icon: ShieldCheck },
-      { title: "Status", icon: SquareCheckBig },
-      { title: "Resources", icon: Layers },
+      {
+        title: "Dashboard",
+        icon: LayoutDashboard,
+        description: "Overview of key metrics",
+      },
+      {
+        title: "Patients",
+        icon: Users,
+        description: "Manage patient information",
+      },
+      {
+        title: "Reports",
+        icon: ChartNoAxesCombined,
+        description: "Analytics and reporting",
+      },
+      {
+        title: "Roles",
+        icon: ShieldCheck,
+        description: "User roles and permissions",
+      },
+      {
+        title: "Status",
+        icon: SquareCheckBig,
+        description: "System status monitoring",
+      },
+      {
+        title: "Resources",
+        icon: Layers,
+        description: "Manage available resources",
+      },
     ],
     []
   );
 
+  // Component mapping for conditional rendering
+  const componentMap = {
+    Dashboard: <Dashboard />,
+    Patients: <PatientsSection />,
+    Reports: <Reports />,
+    Roles: <Roles />,
+    Status: <StatusSection />,
+    Resources: <ResourcesSection />,
+  };
+
   return (
     <SidebarProvider>
+      {/* Sidebar with enhanced items */}
       <AppSidebar
         items={sidebarItems.map((item) => ({
           ...item,
@@ -73,36 +114,42 @@ export default function Caresync() {
         section={section}
         onSectionChange={setSection}
       />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-all ease-linear">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink
-                    onClick={() => setSection("Dashboard")}
-                    className="cursor-pointer"
-                  >
-                    Caresync
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{section}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+
+      {/* Main content area */}
+      <SidebarInset className="flex flex-col">
+        {/* Header with responsive breadcrumbs */}
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center border-b bg-background/95 backdrop-blur transition-all">
+          <div className="flex w-full items-center justify-between px-4">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+              <Separator orientation="vertical" className="mx-2 h-4" />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem className="hidden md:flex items-center">
+                    <Home className="h-4 w-4 mr-1" />
+                    <BreadcrumbLink
+                      onClick={() => setSection("Dashboard")}
+                      className="cursor-pointer hover:text-primary transition-colors"
+                    >
+                      Caresync
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage className="font-medium">
+                      {section}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
           </div>
         </header>
 
-        {section === "Dashboard" && <Dashboard />}
-        {section === "Patients" && <PatientsSection />}
-        {section === "Reports" && <Reports />}
-        {section === "Roles" && <Roles />}
-        {section === "Status" && <StatusSection />}
-        {section === "Resources" && <ResourcesSection />}
+        {/* Main content with smooth transitions */}
+        <main className="flex-1 overflow-auto p-4 md:p-6">
+          {componentMap[section as keyof typeof componentMap]}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
