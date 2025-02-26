@@ -1,13 +1,17 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -15,27 +19,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { useDoctorStore } from "@/lib/store/useDoctorStore";
 import { useRoomStore } from "@/lib/store/useRoomStore";
-import { useEffect, useMemo, useState } from "react";
+import {
+  Building2,
+  Check,
+  DoorOpen,
+  Plus,
+  Search,
+  Trash2,
+  UserRound,
+  X,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 
 const ResourcesSection = () => {
   const { toast } = useToast();
   const { rooms, addRoom, updateRoom, deleteRoom } = useRoomStore();
   const { doctors, assignRoom, removeRoomAssignment } = useDoctorStore();
 
-  useEffect(() => {
-    console.log("Rooms:", rooms);
-    console.log("Doctors:", doctors);
-  }, [rooms, doctors]);
-
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newRoom, setNewRoom] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // ✅ Filter rooms dynamically based on search query
   const filteredRooms = useMemo(
@@ -60,13 +71,10 @@ const ResourcesSection = () => {
     addRoom({
       id: newRoomId,
       number: roomNumber,
-      doctorsAssigned: [],
+      doctorsAssigned: [], // No doctors assigned by default
       patientAssigned: undefined,
-      status: "Empty",
+      doctorStatuses: {},
       isEmergency: false,
-      color: "gray",
-      statusTime: new Date(),
-      statusOrder: 0,
     });
 
     setNewRoom("");
@@ -97,10 +105,12 @@ const ResourcesSection = () => {
       return;
     }
 
+    setIsAssigning(true);
     let assignedCount = 0;
 
     selectedRooms.forEach((roomId) => {
-      const currentRoom = rooms.find((room) => room.id === roomId)!;
+      const currentRoom = rooms.find((room) => room.id === roomId);
+      if (!currentRoom) return;
 
       // ✅ Prevent duplicate assignments
       if (!currentRoom.doctorsAssigned.includes(selectedDoctor)) {
@@ -123,7 +133,9 @@ const ResourcesSection = () => {
     } else {
       toast({
         title: "Success",
-        description: `Rooms assigned to Dr. ${
+        description: `${assignedCount} room${
+          assignedCount !== 1 ? "s" : ""
+        } assigned to Dr. ${
           doctors.find((d) => d.id === selectedDoctor)?.name || "Unknown"
         }!`,
       });
@@ -131,12 +143,14 @@ const ResourcesSection = () => {
 
     // ✅ Reset state after assignment
     setSelectedRooms([]);
-    setSelectedDoctor(null); // Clears selected doctor
+    setSelectedDoctor(null);
+    setIsAssigning(false);
   };
 
   // ✅ Unassign a Doctor from a Room
   const unassignDoctorFromRoom = (roomId: string, doctorId: string) => {
-    const currentRoom = rooms.find((room) => room.id === roomId)!;
+    const currentRoom = rooms.find((room) => room.id === roomId);
+    if (!currentRoom) return;
 
     updateRoom(roomId, {
       ...currentRoom,
@@ -157,134 +171,388 @@ const ResourcesSection = () => {
 
   // ✅ Handle Room Deletion
   const handleRemoveRoom = (roomId: string) => {
-    deleteRoom(roomId);
-    toast({
-      title: "Success",
-      description: `Room removed successfully!`,
-    });
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    if (confirm(`Are you sure you want to remove Room ${room.number}?`)) {
+      deleteRoom(roomId);
+
+      // Remove this room from selected rooms if it's there
+      if (selectedRooms.includes(roomId)) {
+        setSelectedRooms((prev) => prev.filter((id) => id !== roomId));
+      }
+
+      toast({
+        title: "Success",
+        description: `Room ${room.number} removed successfully!`,
+      });
+    }
+  };
+
+  // Reset the room creation form
+  const resetRoomForm = () => {
+    setNewRoom("");
   };
 
   return (
     <>
-      <div className="p-6 space-y-6 bg-gray-50 rounded-lg shadow-md">
-        <div className="flex flex-col md:flex-row items-center gap-4">
-          {/* ✅ Select Doctor Dropdown */}
-          <Select
-            value={selectedDoctor || ""}
-            onValueChange={setSelectedDoctor}
-          >
-            <SelectTrigger className="w-full md:w-1/3">
-              <SelectValue placeholder="Select Doctor" />
-            </SelectTrigger>
-            <SelectContent>
-              {doctors.map((doctor) => (
-                <SelectItem key={doctor.id} value={doctor.id}>
-                  {doctor.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center">
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-primary" />
+              <span>Rooms Management</span>
+            </h1>
+            <p className="text-sm text-gray-500 mt-0.5 hidden sm:block">
+              Manage and assign rooms to doctors
+            </p>
+          </div>
 
-          {/* ✅ Search Rooms */}
-          <Input
-            placeholder="Search rooms..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1"
-          />
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="py-1 px-2 text-xs">
+              <DoorOpen className="h-3.5 w-3.5 mr-1" />
+              {rooms.length} {rooms.length === 1 ? "Room" : "Rooms"}
+            </Badge>
 
-          {/* ✅ Create New Room */}
-          <Button
-            disabled={selectedRooms.length > 0}
-            onClick={() => setIsDialogOpen(true)}
-          >
-            Create Room
-          </Button>
-          <Button disabled={selectedRooms.length === 0} onClick={assignRooms}>
-            Assign Rooms
-          </Button>
+            <Badge variant="outline" className="py-1 px-2 text-xs">
+              <UserRound className="h-3.5 w-3.5 mr-1" />
+              {doctors.length} {doctors.length === 1 ? "Doctor" : "Doctors"}
+            </Badge>
+          </div>
         </div>
 
-        {/* ✅ Rooms List */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredRooms.map((room) => (
-            <div
-              key={room.id}
-              className={`relative p-4 rounded-lg border shadow-md flex flex-col items-start gap-2 transition ${
-                selectedRooms.includes(room.id)
-                  ? "bg-blue-50 border-blue-500"
-                  : "bg-white border-gray-300"
-              }`}
-            >
-              <div className="flex justify-between w-full items-center">
-                <h3 className="text-lg font-semibold"># {room.number}</h3>
+        <Separator className="my-2" />
+
+        {/* Control Panel */}
+        <Card className="mb-4">
+          <CardContent className="p-3 sm:p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {/* Select Doctor Dropdown */}
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">
+                  Select Doctor
+                </label>
+                <Select
+                  value={selectedDoctor || ""}
+                  onValueChange={setSelectedDoctor}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Choose a doctor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {doctors.length === 0 ? (
+                      <div className="py-2 px-1 text-center text-sm text-gray-500">
+                        No doctors available
+                      </div>
+                    ) : (
+                      doctors.map((doctor) => (
+                        <SelectItem
+                          key={doctor.id}
+                          value={doctor.id}
+                          className="text-sm"
+                        >
+                          {doctor.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* ✅ Assigned Doctors */}
-              {room.doctorsAssigned
-                .filter((doctorId) =>
-                  doctors.some((doc) => doc.id === doctorId)
-                ) // ✅ Only show existing doctors
-                .map((doctorId) => (
-                  <span
-                    key={doctorId}
-                    className="flex items-center bg-red-500 text-white text-xs px-2 py-1 rounded"
-                  >
-                    {doctors.find((d) => d.id === doctorId)?.name}
+              {/* Search Rooms */}
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">
+                  Search Rooms
+                </label>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Input
+                    placeholder="Enter room number..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 text-sm"
+                  />
+                  {searchQuery && (
                     <button
-                      onClick={() => unassignDoctorFromRoom(room.id, doctorId)}
-                      className="ml-2 text-xs hover:text-gray-300"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      ✕
+                      <X className="w-4 h-4" />
                     </button>
-                  </span>
-                ))}
-
-              {/* ✅ Room Actions */}
-              <div className="p-3 rounded-lg flex flex-col items-center relative min-w-[170px] h-full transition-all duration-300">
-                {/* Other Room Content Goes Here */}
-
-                {/* Ensure Buttons Always Stay at the Bottom */}
-                <div className="flex items-center gap-2 w-full mt-auto">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toggleRoomSelection(room.id)}
-                  >
-                    {selectedRooms.includes(room.id) ? "Unselect" : "Select"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRemoveRoom(room.id)}
-                  >
-                    Remove
-                  </Button>
+                  )}
                 </div>
               </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 items-end">
+                <Button
+                  disabled={
+                    selectedRooms.length === 0 || !selectedDoctor || isAssigning
+                  }
+                  onClick={assignRooms}
+                  size="sm"
+                  className="flex-1"
+                >
+                  {isAssigning ? (
+                    "Assigning..."
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-1" />
+                      Assign{" "}
+                      {selectedRooms.length > 0
+                        ? `(${selectedRooms.length})`
+                        : ""}
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    resetRoomForm();
+                    setIsDialogOpen(true);
+                  }}
+                  size="sm"
+                  className="flex-1"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Room
+                </Button>
+              </div>
             </div>
-          ))}
-        </div>
+
+            {/* Selection summary */}
+            {selectedRooms.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">
+                    {selectedRooms.length} room
+                    {selectedRooms.length > 1 ? "s" : ""} selected
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedRooms([])}
+                    className="h-7 text-xs"
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+
+                <ScrollArea className="max-h-20">
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {selectedRooms.map((roomId) => {
+                      const room = rooms.find((r) => r.id === roomId);
+                      return room ? (
+                        <Badge
+                          key={roomId}
+                          variant="secondary"
+                          className="flex items-center gap-1 py-1"
+                        >
+                          Room {room.number}
+                          <button
+                            onClick={() => toggleRoomSelection(roomId)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Rooms List */}
+        {filteredRooms.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filteredRooms.map((room) => {
+              const assignedDoctors = room.doctorsAssigned
+                .filter((doctorId) =>
+                  doctors.some((doc) => doc.id === doctorId)
+                )
+                .map((doctorId) => doctors.find((d) => d.id === doctorId)!);
+
+              return (
+                <Card
+                  key={room.id}
+                  className={`overflow-hidden transition-all ${
+                    selectedRooms.includes(room.id) ? "ring-2 ring-primary" : ""
+                  }`}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-base font-bold flex items-center">
+                        <DoorOpen className="w-4 h-4 mr-1 text-primary" />
+                        Room {room.number}
+                      </h3>
+                      <Badge
+                        variant={
+                          selectedRooms.includes(room.id)
+                            ? "default"
+                            : "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {assignedDoctors.length}{" "}
+                        {assignedDoctors.length === 1 ? "doctor" : "doctors"}
+                      </Badge>
+                    </div>
+
+                    {/* Assigned Doctors */}
+                    <div className="min-h-[60px] max-h-[100px] overflow-y-auto">
+                      {assignedDoctors.length > 0 ? (
+                        <div className="space-y-1">
+                          {assignedDoctors.map((doctor) => (
+                            <div
+                              key={doctor.id}
+                              className="flex items-center justify-between bg-gray-100 rounded-md py-1 px-2 group"
+                            >
+                              <span className="text-xs font-medium truncate max-w-[140px]">
+                                {doctor.name}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  unassignDoctorFromRoom(room.id, doctor.id)
+                                }
+                                className="text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-500 italic h-full flex items-center justify-center">
+                          No doctors assigned
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+
+                  <CardFooter className="flex items-center justify-between p-2 bg-gray-50 border-t">
+                    <Button
+                      variant={
+                        selectedRooms.includes(room.id) ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => toggleRoomSelection(room.id)}
+                      className="text-xs h-7"
+                    >
+                      {selectedRooms.includes(room.id) ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1" />
+                          Selected
+                        </>
+                      ) : (
+                        "Select"
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveRoom(room.id)}
+                      className="text-red-500 text-xs h-7"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Remove
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 border border-dashed rounded-lg bg-gray-50">
+            <DoorOpen className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+            {searchQuery ? (
+              <>
+                <h3 className="text-lg font-medium text-gray-700">
+                  No matching rooms found
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Try a different search term or clear your search
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setSearchQuery("")}
+                  size="sm"
+                >
+                  Clear Search
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-medium text-gray-700">
+                  No Rooms Yet
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Add your first room to get started
+                </p>
+                <Button
+                  onClick={() => {
+                    resetRoomForm();
+                    setIsDialogOpen(true);
+                  }}
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Room
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Dialog for Creating Rooms */}
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetRoomForm();
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create a New Room</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-2 py-4">
+              <label className="text-sm font-medium">Room Number</label>
+              <Input
+                placeholder="Enter room number (e.g. 101)"
+                type="number"
+                value={newRoom}
+                onChange={(e) => setNewRoom(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">
+                Room numbers must be unique and numeric
+              </p>
+            </div>
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="sm:mr-2 w-full sm:w-auto order-2 sm:order-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateRoom}
+                className="w-full sm:w-auto order-1 sm:order-2"
+                disabled={!newRoom || isNaN(parseInt(newRoom))}
+              >
+                Create Room
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* ✅ Dialog for Creating Rooms */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create a New Room</DialogTitle>
-          </DialogHeader>
-          <Input
-            placeholder="Enter room number"
-            type="number"
-            value={newRoom}
-            onChange={(e) => setNewRoom(e.target.value)}
-          />
-          <Button onClick={handleCreateRoom} className="mt-4">
-            Add Room
-          </Button>
-        </DialogContent>
-      </Dialog>
-
+      {/* Toaster component for toast notifications */}
       <Toaster />
     </>
   );
