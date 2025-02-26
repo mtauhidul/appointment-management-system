@@ -1,37 +1,72 @@
 "use client";
 
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Clock4,
+  DoorOpen,
+  Minus,
+  Plus,
+  RotateCcw,
+  UserCog,
+  Users,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import tinycolor from "tinycolor2";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { PopoverClose } from "@radix-ui/react-popover";
+
 import { useDoctorStore } from "@/lib/store/useDoctorStore";
 import { useRoomStore } from "@/lib/store/useRoomStore";
 import { useStatusStore } from "@/lib/store/useStatusStore";
-import { PopoverClose } from "@radix-ui/react-popover";
-import { Bell, Clock, Minus, Plus, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+
+// Helper to format time in MM:SS
+const formatTime = (seconds: number) => {
+  return `${Math.floor(seconds / 60)}:${(seconds % 60)
+    .toString()
+    .padStart(2, "0")}`;
+};
 
 const Dashboard = () => {
   const { doctors } = useDoctorStore();
   const { rooms, updateRoom } = useRoomStore();
   const { statuses } = useStatusStore();
 
-  // ✅ Generate a map of status colors dynamically from store
+  // Generate status colors map
   const statusColors = statuses.reduce(
     (acc: { [key: string]: string }, status) => {
-      acc[status.name] = status.color || "#e5e7eb"; // Default light gray
+      acc[status.name] = status.color || "#e5e7eb";
       return acc;
     },
     {}
   );
 
-  // ✅ Timer state to track elapsed time for each doctor’s assigned rooms
+  // Timers state for tracking elapsed time
   const [timers, setTimers] = useState<{
     [key: string]: { [doctorId: string]: number };
   }>({});
 
+  // Update timers every second
   useEffect(() => {
     const interval = setInterval(() => {
       setTimers((prev) => {
@@ -63,7 +98,18 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [rooms]);
 
-  // ✅ Reset Room (specific to doctor)
+  // Audio handlers
+  const playNotificationSound = () => {
+    const audio = new Audio("/sounds/beep.mp3");
+    audio.play().catch((err) => console.error("Audio play failed:", err));
+  };
+
+  const playEmergencySound = () => {
+    const audio = new Audio("/sounds/emergency.mp3");
+    audio.play().catch((err) => console.error("Audio play failed:", err));
+  };
+
+  // Reset specific room for a doctor
   const handleRoomReset = (roomId: string, doctorId: string) => {
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
@@ -80,7 +126,7 @@ const Dashboard = () => {
     });
   };
 
-  // ✅ Reset all rooms under a specific doctor
+  // Reset all rooms for a specific doctor
   const handleResetAllRooms = (doctorId: string) => {
     rooms
       .filter((room) =>
@@ -91,19 +137,7 @@ const Dashboard = () => {
       .forEach((room) => handleRoomReset(room.id, doctorId));
   };
 
-  // ✅ Function to play notification sound when a status with sound is applied
-  const playNotificationSound = () => {
-    const audio = new Audio("/sounds/beep.mp3"); // Ensure file exists
-    audio.play().catch((err) => console.error("Audio play failed:", err));
-  };
-
-  // ✅ Function to play emergency sound
-  const playEmergencySound = () => {
-    const audio = new Audio("/sounds/emergency.mp3"); // Ensure file exists
-    audio.play().catch((err) => console.error("Audio play failed:", err));
-  };
-
-  // ✅ Update Room Status and trigger sound if needed (specific to doctor)
+  // Update room status for a doctor
   const handleUpdateStatus = (
     roomId: string,
     doctorId: string,
@@ -129,31 +163,28 @@ const Dashboard = () => {
       doctorStatuses: updatedDoctorStatuses,
     });
 
-    // ✅ Check if the new status requires sound
+    // Play sound if status has sound enabled
     const statusObject = statuses.find((s) => s.name === newStatus);
     if (statusObject?.hasSound) {
       playNotificationSound();
     }
   };
 
-  // ✅ Toggle Emergency Mode and trigger emergency sound
+  // Toggle emergency mode for a room
   const handleToggleEmergency = (roomId: string) => {
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
 
     const newEmergencyState = !room.isEmergency;
+    updateRoom(roomId, { isEmergency: newEmergencyState });
 
-    updateRoom(roomId, {
-      isEmergency: newEmergencyState,
-    });
-
-    // 🔊 Play emergency sound **only when activated**
+    // Play emergency sound only when activated
     if (newEmergencyState) {
       playEmergencySound();
     }
   };
 
-  // ✅ Update Patient Count (specific to doctor)
+  // Update patient count for a doctor
   const handlePatientCountChange = (doctorId: string, count: number) => {
     const doctor = doctors.find((doc) => doc.id === doctorId);
     if (!doctor) return;
@@ -166,211 +197,362 @@ const Dashboard = () => {
     });
   };
 
-  useEffect(() => {
-    console.log(doctors);
-  }, [doctors]);
-
   return (
-    <div className="p-4 space-y-4">
-      {doctors.map((doctor) => (
-        <div
-          key={doctor.id}
-          className="space-y-4 bg-white p-4 rounded-lg shadow-lg"
-        >
-          <div className="flex flex-wrap items-center justify-between bg-white p-3 rounded-lg shadow-md gap-3 md:gap-6">
-            {/* Left Section: Doctor Name & Specialty */}
-            <div className="flex items-center gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">
-                  {doctor.name}
-                </h2>
-                <p className="text-xs text-primary">{doctor.specialty}</p>
-              </div>
-            </div>
+    <TooltipProvider>
+      <div className="container mx-auto p-4 space-y-6">
+        {doctors.map((doctor) => (
+          <Card key={doctor.id} className="overflow-hidden">
+            <CardHeader className="bg-background p-4 border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {/* Doctor Info */}
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">{doctor.name}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {doctor.specialty}
+                    </p>
+                  </div>
+                </div>
 
-            {/* Middle Section: Compact Patient Counter */}
-            <div className="flex items-center bg-gray-50 p-2 rounded-lg shadow-inner gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handlePatientCountChange(doctor.id, -1)}
-                disabled={doctor.patients.length === 0}
-              >
-                <Minus className="w-4 h-4 text-red-500" />
-              </Button>
-              <span className="text-sm font-semibold">
-                {doctor.patients.length} Patients
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handlePatientCountChange(doctor.id, 1)}
-              >
-                <Plus className="w-4 h-4 text-green-500" />
-              </Button>
-            </div>
-
-            {/* Right Section: Reset Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-auto"
-              onClick={() => handleResetAllRooms(doctor.id)}
-            >
-              Reset Rooms
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {rooms
-              .filter((room) => doctor.roomsAssigned.includes(room.id))
-              .map((room) => {
-                const doctorRoomData = room.doctorStatuses?.[doctor.id] || {
-                  status: "Empty",
-                  statusOrder: 0,
-                  statusTime: 0,
-                };
-
-                const roomColor = room.isEmergency
-                  ? "#ffcccc"
-                  : statusColors[doctorRoomData.status] || "#f3f4f6";
-                const borderColor = room.isEmergency
-                  ? "#ff0000"
-                  : statusColors[doctorRoomData.status] || "#d1d5db";
-
-                // Find the order of this room within its status group for the specific doctor
-                const statusRooms = rooms
-                  .filter(
-                    (r) =>
-                      r.doctorStatuses?.[doctor.id]?.status ===
-                        doctorRoomData.status &&
-                      r.doctorStatuses?.[doctor.id]?.status !== "Empty"
-                  )
-                  .sort(
-                    (a, b) =>
-                      new Date(
-                        a.doctorStatuses?.[doctor.id]?.statusTime || 0
-                      ).getTime() -
-                      new Date(
-                        b.doctorStatuses?.[doctor.id]?.statusTime || 0
-                      ).getTime()
-                  );
-
-                const statusOrder =
-                  statusRooms.findIndex((r) => r.id === room.id) + 1;
-
-                return (
-                  <div
-                    key={room.id}
-                    className={`p-2 rounded-lg shadow-md flex flex-col items-center relative min-w-[160px] transition-all duration-300 ${
-                      room.isEmergency ? "animate-pulse bg-red-300" : "bg-white"
-                    }`}
-                    style={{
-                      backgroundColor: roomColor,
-                      border: `1.5px solid ${borderColor}`,
-                    }}
-                  >
-                    {/* Room Header */}
-                    <div className="flex justify-between w-full">
-                      <span className="text-md font-semibold">
-                        {room.number}
-                      </span>
-                      <div className="flex space-x-2">
-                        {/* Emergency Button */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:ml-auto">
+                  {/* Patient Counter */}
+                  <div className="flex items-center bg-accent/50 p-2 rounded-lg gap-2 self-stretch">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                         <Button
-                          disabled={doctorRoomData.status === "Empty"}
                           variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleEmergency(room.id)}
-                          className={`${
-                            room.isEmergency
-                              ? "animate-pulse text-red-500"
-                              : "text-gray-500"
-                          }`}
-                        >
-                          <Bell className="w-4 h-4" />
-                        </Button>
-
-                        {/* Reset Button */}
-                        <Button
-                          disabled={
-                            doctorRoomData.status === "Empty" ||
-                            room.isEmergency
+                          size="icon"
+                          onClick={() =>
+                            handlePatientCountChange(doctor.id, -1)
                           }
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRoomReset(room.id, doctor.id)}
+                          disabled={doctor.patients.length === 0}
+                          className="h-8 w-8"
                         >
-                          <RotateCcw className="w-4 h-4 text-gray-500" />
+                          <Minus className="h-4 w-4 text-destructive" />
                         </Button>
-                      </div>
-                    </div>
+                      </TooltipTrigger>
+                      <TooltipContent>Remove patient</TooltipContent>
+                    </Tooltip>
 
-                    {/* Status with Order Number */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <div>
-                          <Button
-                            variant="outline"
-                            className="mt-2 px-2 py-1 text-xs rounded-full bg-white shadow-md font-semibold text-gray-800 flex items-center"
-                          >
-                            {statusOrder > 0 && (
-                              <span className="text-white font-bold bg-blue-600 w-5 h-5 flex items-center justify-center rounded-full shadow-lg text-xs -ml-1">
-                                {statusOrder}
+                    <span className="text-sm font-medium min-w-[80px] text-center">
+                      {doctor.patients.length}{" "}
+                      {doctor.patients.length === 1 ? "Patient" : "Patients"}
+                    </span>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handlePatientCountChange(doctor.id, 1)}
+                          className="h-8 w-8"
+                        >
+                          <Plus className="h-4 w-4 text-primary" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Add patient</TooltipContent>
+                    </Tooltip>
+                  </div>
+
+                  {/* Reset Button */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="self-stretch"
+                        onClick={() => handleResetAllRooms(doctor.id)}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reset All Rooms
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Clear all room statuses</TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {rooms
+                  .filter((room) => doctor.roomsAssigned.includes(room.id))
+                  .map((room) => {
+                    const doctorRoomData = room.doctorStatuses?.[doctor.id] || {
+                      status: "Empty",
+                      statusOrder: 0,
+                      statusTime: 0,
+                    };
+
+                    // Enhanced room styling based on emergency and status
+                    const getCardStyles = () => {
+                      // Emergency state takes priority
+                      if (room.isEmergency) {
+                        return {
+                          backgroundColor: "#fff0f0",
+                          borderColor: "#ff5555",
+                          boxShadow: "0 0 0 1px rgba(255, 85, 85, 0.5)",
+                        };
+                      }
+
+                      // Empty rooms get a neutral styling
+                      if (doctorRoomData.status === "Empty") {
+                        return {
+                          backgroundColor: "#fafafa",
+                          borderColor: "#e2e8f0",
+                          boxShadow: "none",
+                        };
+                      }
+
+                      // Get status color and create a subtle background variant
+                      const statusColor =
+                        statusColors[doctorRoomData.status] || "#e2e8f0";
+                      const color = tinycolor(statusColor);
+
+                      return {
+                        backgroundColor: color.setAlpha(0.05).toRgbString(),
+                        borderColor: statusColor,
+                        boxShadow: `0 0 0 1px ${color
+                          .setAlpha(0.2)
+                          .toRgbString()}`,
+                      };
+                    };
+
+                    const roomStyles = getCardStyles();
+
+                    // Determine order number within status group
+                    const statusRooms = rooms
+                      .filter(
+                        (r) =>
+                          r.doctorStatuses?.[doctor.id]?.status ===
+                            doctorRoomData.status &&
+                          r.doctorStatuses?.[doctor.id]?.status !== "Empty"
+                      )
+                      .sort(
+                        (a, b) =>
+                          new Date(
+                            a.doctorStatuses?.[doctor.id]?.statusTime || 0
+                          ).getTime() -
+                          new Date(
+                            b.doctorStatuses?.[doctor.id]?.statusTime || 0
+                          ).getTime()
+                      );
+
+                    const statusOrder =
+                      statusRooms.findIndex((r) => r.id === room.id) + 1;
+                    const timer = timers[room.id]?.[doctor.id] || 0;
+
+                    return (
+                      <Card
+                        key={room.id}
+                        className={`overflow-hidden transition-all duration-300 border-2 ${
+                          room.isEmergency ? "animate-pulse border-red-500" : ""
+                        }`}
+                        style={{
+                          backgroundColor: roomStyles.backgroundColor,
+                          borderColor: roomStyles.borderColor,
+                          boxShadow: roomStyles.boxShadow,
+                        }}
+                      >
+                        <CardHeader className="py-2 px-3 flex flex-row items-center justify-between space-y-0">
+                          <div className="flex items-center gap-2">
+                            <DoorOpen className="h-4 w-4 text-muted-foreground" />
+                            <h3 className="font-medium text-sm">
+                              Room {room.number}
+                            </h3>
+                          </div>
+
+                          <div className="flex items-center space-x-1">
+                            {/* Emergency Button */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  disabled={doctorRoomData.status === "Empty"}
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleToggleEmergency(room.id)}
+                                  className={`h-7 w-7 p-0 ${
+                                    room.isEmergency
+                                      ? "text-red-500"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {room.isEmergency
+                                  ? "Cancel Emergency"
+                                  : "Signal Emergency"}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Reset Button */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  disabled={
+                                    doctorRoomData.status === "Empty" ||
+                                    room.isEmergency
+                                  }
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleRoomReset(room.id, doctor.id)
+                                  }
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Reset Room</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </CardHeader>
+
+                        <CardContent className="py-2 px-3 flex flex-col items-center">
+                          {/* Status Selector */}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full relative justify-center gap-2"
+                                style={{
+                                  borderLeftColor:
+                                    statusColors[doctorRoomData.status] ||
+                                    "#e2e8f0",
+                                  borderLeftWidth: "4px",
+                                  backgroundColor:
+                                    doctorRoomData.status === "Empty"
+                                      ? "#f9fafb"
+                                      : "#ffffff",
+                                }}
+                              >
+                                {statusOrder > 0 && (
+                                  <Badge className="absolute -top-2 -left-2 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground rounded-full">
+                                    {statusOrder}
+                                  </Badge>
+                                )}
+                                {doctorRoomData.status === "Empty" && (
+                                  <DoorOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                                )}
+                                {doctorRoomData.status === "Ready" && (
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                )}
+                                {doctorRoomData.status === "Waiting" && (
+                                  <Clock4 className="h-3.5 w-3.5 text-amber-500" />
+                                )}
+                                {doctorRoomData.status === "In Progress" && (
+                                  <UserCog className="h-3.5 w-3.5 text-blue-500" />
+                                )}
+                                <span className="font-medium">
+                                  {doctorRoomData.status}
+                                </span>
+                              </Button>
+                            </PopoverTrigger>
+
+                            <PopoverContent className="p-1 w-48">
+                              <div className="grid gap-1">
+                                {statuses.map((status) => {
+                                  // Create a button background with very subtle color from status
+                                  const bgColor = tinycolor(status.color)
+                                    .setAlpha(0.08)
+                                    .toRgbString();
+                                  const hoverColor = tinycolor(status.color)
+                                    .setAlpha(0.15)
+                                    .toRgbString();
+
+                                  return (
+                                    <PopoverClose asChild key={status.id}>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full justify-start text-left text-sm font-normal hover:bg-[--hover-color]"
+                                        onClick={() =>
+                                          handleUpdateStatus(
+                                            room.id,
+                                            doctor.id,
+                                            status.name
+                                          )
+                                        }
+                                        style={
+                                          {
+                                            borderLeft: `3px solid ${status.color}`,
+                                            paddingLeft: "10px",
+                                            backgroundColor:
+                                              doctorRoomData.status ===
+                                              status.name
+                                                ? bgColor
+                                                : "transparent",
+                                            "--hover-color": hoverColor,
+                                          } as React.CSSProperties
+                                        }
+                                      >
+                                        {status.name === "Empty" && (
+                                          <DoorOpen className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                                        )}
+                                        {status.name === "Ready" && (
+                                          <CheckCircle2 className="h-3.5 w-3.5 mr-2 text-emerald-500" />
+                                        )}
+                                        {status.name === "Waiting" && (
+                                          <Clock4 className="h-3.5 w-3.5 mr-2 text-amber-500" />
+                                        )}
+                                        {status.name === "In Progress" && (
+                                          <UserCog className="h-3.5 w-3.5 mr-2 text-blue-500" />
+                                        )}
+                                        {status.name}
+                                      </Button>
+                                    </PopoverClose>
+                                  );
+                                })}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+
+                          {/* Patient Name with badge */}
+                          <div className="flex items-center justify-center mt-2">
+                            {room.patientAssigned ? (
+                              <Badge
+                                variant="outline"
+                                className="font-normal text-xs bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100"
+                              >
+                                {room.patientAssigned}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                No Patient Assigned
                               </span>
                             )}
-                            {doctorRoomData.status}
-                          </Button>
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-2 bg-white shadow-lg rounded-lg space-y-2">
-                        {statuses.map((status) => (
-                          <PopoverClose asChild key={status.id}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full text-left hover:bg-gray-100 text-sm"
-                              onClick={() =>
-                                handleUpdateStatus(
-                                  room.id,
-                                  doctor.id,
-                                  status.name
-                                )
-                              }
+                          </div>
+                        </CardContent>
+
+                        <CardFooter className="p-2 flex justify-center items-center border-t bg-muted/30">
+                          <div className="flex items-center gap-1 text-xs">
+                            <Clock className="h-3 w-3" />
+                            <span
+                              className={`${
+                                // Highlight timer if more than 5 minutes and not empty
+                                timer > 300 && doctorRoomData.status !== "Empty"
+                                  ? "text-amber-600 font-medium"
+                                  : "text-muted-foreground"
+                              }`}
                             >
-                              {status.name}
-                            </Button>
-                          </PopoverClose>
-                        ))}
-                      </PopoverContent>
-                    </Popover>
-
-                    {/* Patient Name */}
-                    <p className="text-xs text-gray-600 mt-1">
-                      {room.patientAssigned || "No Patient"}
-                    </p>
-
-                    {/* Timer */}
-                    <div className="mt-2 flex items-center space-x-1 text-xs">
-                      <Clock className="w-4 h-4 text-gray-500" />
-                      <span>
-                        {timers[room.id] &&
-                        timers[room.id][doctor.id] !== undefined
-                          ? `${Math.floor(timers[room.id][doctor.id] / 60)}:${(
-                              timers[room.id][doctor.id] % 60
-                            )
-                              .toString()
-                              .padStart(2, "0")}`
-                          : "00:00"}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      ))}
-    </div>
+                              {formatTime(timer)}
+                            </span>
+                          </div>
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </TooltipProvider>
   );
 };
 

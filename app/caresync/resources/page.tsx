@@ -307,6 +307,7 @@ const ResourcesSection = () => {
                 </Button>
 
                 <Button
+                  disabled={selectedRooms.length > 0 || isAssigning}
                   onClick={() => {
                     resetRoomForm();
                     setIsDialogOpen(true);
