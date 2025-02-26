@@ -129,7 +129,9 @@ const ResourcesSection = () => {
       });
     }
 
+    // ✅ Reset state after assignment
     setSelectedRooms([]);
+    setSelectedDoctor(null); // Clears selected doctor
   };
 
   // ✅ Unassign a Doctor from a Room
@@ -167,7 +169,10 @@ const ResourcesSection = () => {
       <div className="p-6 space-y-6 bg-gray-50 rounded-lg shadow-md">
         <div className="flex flex-col md:flex-row items-center gap-4">
           {/* ✅ Select Doctor Dropdown */}
-          <Select onValueChange={setSelectedDoctor}>
+          <Select
+            value={selectedDoctor || ""}
+            onValueChange={setSelectedDoctor}
+          >
             <SelectTrigger className="w-full md:w-1/3">
               <SelectValue placeholder="Select Doctor" />
             </SelectTrigger>
@@ -236,21 +241,26 @@ const ResourcesSection = () => {
                 ))}
 
               {/* ✅ Room Actions */}
-              <div className="flex items-center gap-2 w-full mt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toggleRoomSelection(room.id)}
-                >
-                  {selectedRooms.includes(room.id) ? "Unselect" : "Select"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleRemoveRoom(room.id)}
-                >
-                  Remove
-                </Button>
+              <div className="p-3 rounded-lg flex flex-col items-center relative min-w-[170px] h-full transition-all duration-300">
+                {/* Other Room Content Goes Here */}
+
+                {/* Ensure Buttons Always Stay at the Bottom */}
+                <div className="flex items-center gap-2 w-full mt-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleRoomSelection(room.id)}
+                  >
+                    {selectedRooms.includes(room.id) ? "Unselect" : "Select"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveRoom(room.id)}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
