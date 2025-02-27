@@ -1,126 +1,221 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+
+// Define form schema with zod
+const formSchema = z.object({
+  email: z
+    .string()
+    .min(1, { message: "Email is required" })
+    .email({ message: "Invalid email address" }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-    // Dummy authentication logic
-    const demoUsers = {
-      "patient@example.com": "/patient/portal",
-    };
+  async function onSubmit(data: FormValues) {
+    setIsLoading(true);
 
-    const userRole = demoUsers[email as keyof typeof demoUsers];
-    if (userRole) {
-      router.push(userRole);
-    } else {
-      alert("Invalid credentials");
+    try {
+      // In a real application, this would be an API call
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+
+      // Mock authentication logic
+      const demoUsers = {
+        "patient@example.com": {
+          route: "/patient/portal",
+          password: "password123",
+        },
+        "test@example.com": {
+          route: "/patient/portal",
+          password: "password123",
+        },
+      };
+
+      const user = demoUsers[data.email as keyof typeof demoUsers];
+
+      if (user && user.password === data.password) {
+        // Success notification
+        toast({
+          title: "Login successful",
+          description: "Redirecting to your dashboard...",
+          variant: "default",
+        });
+
+        // In a real application, you would save the auth token here
+        localStorage.setItem("isAuthenticated", "true");
+
+        // Redirect to dashboard
+        setTimeout(() => {
+          router.push(user.route);
+        }, 1000);
+      } else {
+        // Error notification
+        toast({
+          title: "Login failed",
+          description: "Invalid email or password. Please try again.",
+          variant: "destructive",
+        });
+        form.setError("root", {
+          message: "Invalid email or password",
+        });
+      }
+    } catch (error) {
+      // Error notification for unexpected errors
+      toast({
+        title: "Something went wrong",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
-
-    // Clear form fields
-    setEmail("");
-    setPassword("");
-  };
+  }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="bg-gray-800 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-2xl text-orange-400">Login</CardTitle>
+    <div className={cn("w-full", className)} {...props}>
+      <Card className="bg-gray-800/90 backdrop-blur-sm shadow-xl border-gray-700">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-white">
+            Welcome back
+          </CardTitle>
           <CardDescription className="text-gray-300">
-            Enter your credentials to access the portal
+            Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email" className="text-gray-300">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-gray-700 text-white placeholder-gray-500"
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password" className="text-gray-300">
-                    Password
-                  </Label>
-                  <a
-                    href="#"
-                    className="ml-auto inline-block text-sm text-orange-400 underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </a>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-200">Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="name@example.com"
+                        className="bg-gray-700/80 border-gray-600 text-white placeholder:text-gray-400"
+                        disabled={isLoading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-400" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="text-gray-200">Password</FormLabel>
+                      <Link
+                        href="/patient/forgot-password"
+                        className="text-sm font-medium text-blue-400 hover:text-blue-300"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        className="bg-gray-700/80 border-gray-600 text-white"
+                        disabled={isLoading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-400" />
+                  </FormItem>
+                )}
+              />
+              {form.formState.errors.root && (
+                <div className="text-sm font-medium text-red-500 dark:text-red-400">
+                  {form.formState.errors.root.message}
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-gray-700 text-white placeholder-gray-500"
-                />
-              </div>
+              )}
               <Button
                 type="submit"
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isLoading}
               >
-                Login
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Please wait
+                  </>
+                ) : (
+                  "Sign In"
+                )}
               </Button>
-              {/* <Button variant="outline" className="w-full">
-                Login with Google
-              </Button> */}
-            </div>
-            <div className="mt-4 text-center text-sm">
-              <Link
-                href="/patient/register"
-                passHref
-                className="text-orange-400 underline underline-offset-4"
-              >
-                Don&apos;t have an account? Register
-              </Link>
-            </div>
-            <div className="mt-4 text-center text-sm">
-              <Link
-                href="/"
-                passHref
-                className="text-orange-400 flex items-center justify-center font-semibold hover:text-white border border-gray-700 rounded-md p-1 w-1/2 mx-auto"
-              >
-                <ArrowLeft /> Back to home
-              </Link>
-            </div>
-          </form>
+            </form>
+          </Form>
         </CardContent>
+        <CardFooter className="flex flex-col space-y-4 border-t border-gray-700 pt-4">
+          <div className="text-center text-sm text-gray-300">
+            <span>Don&apos;t have an account? </span>
+            <Link
+              href="/patient/register"
+              className="font-medium text-blue-400 hover:text-blue-300"
+            >
+              Sign up
+            </Link>
+          </div>
+          <Link
+            href="/"
+            className="flex items-center justify-center text-sm text-gray-300 hover:text-white"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to home
+          </Link>
+        </CardFooter>
       </Card>
     </div>
   );

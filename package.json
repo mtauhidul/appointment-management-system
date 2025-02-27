@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.1.4",
@@ -37,12 +38,14 @@
     "react-color": "^2.19.3",
     "react-day-picker": "8.10.1",
     "react-dom": "^18",
+    "react-hook-form": "^7.54.2",
     "recharts": "^2.15.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "tinycolor2": "^1.6.0",
     "vaul": "^1.1.2",
     "xlsx": "^0.18.5",
+    "zod": "^3.24.2",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
