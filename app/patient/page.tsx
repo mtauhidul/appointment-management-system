@@ -15,20 +15,12 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import {
-  CalendarDays,
-  ClipboardPlus,
-  LayoutDashboard,
-  SquareUser,
-  Text,
-} from "lucide-react";
+import { LayoutDashboard, SquareUser, Text } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import Appointments from "./appointments/appointments";
 import Dashboard from "./dashboard/dashboard";
 import Kiosk from "./kiosk/kiosk";
 import Profile from "./profile/profile";
-import Reports from "./reports/reports";
 
 export default function Patient() {
   const router = useRouter();
@@ -46,9 +38,7 @@ export default function Patient() {
 
   const sidebarItems = useMemo(
     () => [
-      { title: "Dashboard", icon: LayoutDashboard },
-      { title: "Reports", icon: ClipboardPlus },
-      { title: "Appointments", icon: CalendarDays },
+      { title: "Appointments", icon: LayoutDashboard },
       { title: "Profile", icon: SquareUser },
       { title: "Kiosk", icon: Text },
     ],
@@ -56,9 +46,7 @@ export default function Patient() {
   );
 
   const componentMapping: { [key: string]: JSX.Element } = {
-    Dashboard: <Dashboard />,
-    Reports: <Reports />,
-    Appointments: <Appointments />,
+    Appointments: <Dashboard />,
     Profile: <Profile />,
     Kiosk: <Kiosk />,
   };
