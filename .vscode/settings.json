@@ -1,3 +1,10 @@
 {
-  "cSpell.words": ["Caresync", "FHIR", "papaparse", "YTFC", "YTFCS"]
+  "cSpell.words": [
+    "Caresync",
+    "FHIR",
+    "Firestore",
+    "papaparse",
+    "YTFC",
+    "YTFCS"
+  ]
 }
