@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import AssistantsList from "./assistantsList/assistantsList";
 import DoctorsList from "./doctorsList/doctorsList";
 import ReceptionistsList from "./receptionistsList/receptionistsList";
+import { FHIRIntegrationPanel } from "@/components/fhir/fhir-integration-panel";
 
 const Roles = () => {
   const [activeTab, setActiveTab] = useState<
@@ -157,6 +158,14 @@ const Roles = () => {
       </div>
 
       <Separator className="my-2 sm:my-3" />
+
+      {/* FHIR Integration Panel for Practitioner Sync */}
+      <FHIRIntegrationPanel
+        onPractitionerSync={(practitionerId) => {
+          console.log("Practitioner synced to system:", practitionerId);
+          // Optionally refresh the doctors list or show success notification
+        }}
+      />
 
       <Tabs
         value={activeTab}

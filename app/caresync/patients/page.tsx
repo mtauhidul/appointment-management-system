@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { FHIRIntegrationPanel } from "@/components/fhir/fhir-integration-panel";
 
 const PatientsSection = () => {
   const [files, setFiles] = useState<FileData[]>([]);
@@ -181,43 +182,73 @@ const PatientsSection = () => {
     <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 bg-white min-h-screen">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-semibold">Patient Records</h1>
-
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 min-w-0">
-            <label
-              htmlFor="upload-patients-file"
-              className="flex items-center justify-center w-full px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
-            >
-              <Upload className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500" />
-              <span className="text-sm font-medium">Upload File</span>
-              <Input
-                id="upload-patients-file"
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={handleFileUpload}
-                className="sr-only"
-              />
-            </label>
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
-              >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>Sort by name</DropdownMenuItem>
-              <DropdownMenuItem>Sort by date</DropdownMenuItem>
-              <DropdownMenuItem>Clear all files</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="text-sm text-gray-600">
+          Manage patient data through file uploads or FHIR integration
         </div>
       </div>
+
+      {/* FHIR Integration Panel */}
+      <FHIRIntegrationPanel
+        onPatientSync={(patientId) => {
+          console.log("Patient synced:", patientId);
+          // You can add additional logic here if needed
+        }}
+        onPractitionerSync={(practitionerId) => {
+          console.log("Practitioner synced:", practitionerId);
+          // You can add additional logic here if needed
+        }}
+      />
+
+      {/* File Upload Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">File Upload</h2>
+              <p className="text-sm text-gray-600">
+                Upload patient data files (CSV, Excel)
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 min-w-0">
+              <label
+                htmlFor="upload-patients-file"
+                className="flex items-center justify-center w-full px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
+              >
+                <Upload className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500" />
+                <span className="text-sm font-medium">Upload File</span>
+                <Input
+                  id="upload-patients-file"
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleFileUpload}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>Sort by name</DropdownMenuItem>
+                <DropdownMenuItem>Sort by date</DropdownMenuItem>
+                <DropdownMenuItem>Clear all files</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="flex items-center justify-center p-6 sm:p-8">

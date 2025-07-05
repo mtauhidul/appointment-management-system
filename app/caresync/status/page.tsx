@@ -138,22 +138,37 @@ const StatusSection = () => {
     }, 500);
   };
 
-  // Activity type options
+  // Activity type options for rooms
   const activityTypes = [
-    { value: "Doctor", label: "Doctor" },
-    { value: "Staff", label: "Staff" },
-    { value: "Patient", label: "Patient" },
+    { value: "Examination", label: "Examination Room" },
+    { value: "Treatment", label: "Treatment Room" },
+    { value: "Consultation", label: "Consultation Room" },
+    { value: "Emergency", label: "Emergency Room" },
+    { value: "Surgery", label: "Surgery Room" },
+    { value: "Recovery", label: "Recovery Room" },
+    { value: "Cleaning", label: "Cleaning/Maintenance" },
+    { value: "General", label: "General Purpose" },
   ];
 
-  // Get badge color based on activity type
+  // Get badge color based on room type
   const getActivityTypeBadgeColor = (type: string) => {
     switch (type) {
-      case "Doctor":
+      case "Examination":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Staff":
+      case "Treatment":
         return "bg-green-100 text-green-800 border-green-200";
-      case "Patient":
+      case "Consultation":
         return "bg-purple-100 text-purple-800 border-purple-200";
+      case "Emergency":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "Surgery":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "Recovery":
+        return "bg-teal-100 text-teal-800 border-teal-200";
+      case "Cleaning":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "General":
+        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -187,14 +202,14 @@ const StatusSection = () => {
             <div className="flex flex-col items-center justify-center p-4 sm:p-8 bg-muted/50 rounded-lg border border-dashed">
               <AlertCircle className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground mb-3 sm:mb-4" />
               <h3 className="text-base sm:text-lg font-medium text-center">
-                No statuses created
+                No room statuses created
               </h3>
               <p className="text-sm text-muted-foreground text-center mt-1 mb-3 sm:mb-4 px-2">
-                Create your first status to get started with user activity
+                Create your first room status to get started with room activity
                 tracking
               </p>
               <Button onClick={() => setIsDialogOpen(true)}>
-                Add Your First Status
+                Add Your First Room Status
               </Button>
             </div>
           ) : (
@@ -309,12 +324,12 @@ const StatusSection = () => {
             <DialogContent className="w-full max-w-md mx-auto p-3 sm:p-4 md:p-6 max-h-[95vh] overflow-y-auto">
               <DialogHeader className="space-y-1 sm:space-y-2">
                 <DialogTitle className="text-lg sm:text-xl">
-                  {isEditing ? "Edit Status" : "Create New Status"}
+                  {isEditing ? "Edit Room Status" : "Create New Room Status"}
                 </DialogTitle>
                 <DialogDescription className="text-xs sm:text-sm">
                   {isEditing
-                    ? "Update the properties of this status."
-                    : "Define a new status type for the system."}
+                    ? "Update the properties of this room status."
+                    : "Define a new status type for rooms in the system."}
                 </DialogDescription>
               </DialogHeader>
 
@@ -324,11 +339,11 @@ const StatusSection = () => {
                     htmlFor="name"
                     className="text-xs sm:text-sm font-medium"
                   >
-                    Status Name
+                    Room Status Name
                   </Label>
                   <Input
                     id="name"
-                    placeholder="E.g., Available, Busy, Away"
+                    placeholder="E.g., Doctor In, Patient Ready, Ready for Cleaning"
                     value={newStatus.name}
                     onChange={(e) =>
                       setNewStatus({ ...newStatus, name: e.target.value })
@@ -342,7 +357,7 @@ const StatusSection = () => {
                     htmlFor="activity-type"
                     className="text-xs sm:text-sm font-medium"
                   >
-                    Activity Type
+                    Room Type
                   </Label>
                   <Select
                     value={newStatus.activityType}
@@ -354,7 +369,7 @@ const StatusSection = () => {
                       id="activity-type"
                       className="w-full text-sm"
                     >
-                      <SelectValue placeholder="Select user type" />
+                      <SelectValue placeholder="Select room type" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-auto">
                       {activityTypes.map((type) => (
@@ -384,18 +399,16 @@ const StatusSection = () => {
                         disableAlpha
                         width="100%"
                         presetColors={[
-                          "#D0021B",
-                          "#F5A623",
-                          "#F8E71C",
-                          "#8B572A",
-                          "#7ED321",
-                          "#417505",
-                          "#4A90E2",
-                          "#50E3C2",
-                          "#B8E986",
-                          "#9013FE",
-                          "#BD10E0",
-                          "#9B9B9B",
+                          "#D0021B", // Red - Emergency
+                          "#F5A623", // Orange - Surgery
+                          "#F8E71C", // Yellow - Cleaning
+                          "#7ED321", // Green - Treatment
+                          "#417505", // Dark Green - Recovery
+                          "#4A90E2", // Blue - Examination
+                          "#50E3C2", // Teal - General
+                          "#9013FE", // Purple - Consultation
+                          "#BD10E0", // Pink - Special
+                          "#9B9B9B", // Gray - Out of Service
                         ]}
                       />
                     </div>
@@ -408,10 +421,10 @@ const StatusSection = () => {
                       htmlFor="notification"
                       className="text-xs sm:text-sm font-medium"
                     >
-                      Notification Sound
+                      Status Change Alert
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Play sound when status changes
+                      Play sound when room status changes
                     </p>
                   </div>
                   <Switch
@@ -440,8 +453,8 @@ const StatusSection = () => {
                   {loading
                     ? "Saving..."
                     : isEditing
-                    ? "Update Status"
-                    : "Create Status"}
+                    ? "Update Room Status"
+                    : "Create Room Status"}
                 </Button>
               </div>
             </DialogContent>

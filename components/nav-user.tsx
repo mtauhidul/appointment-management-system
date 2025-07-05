@@ -34,8 +34,6 @@ export function NavUser({
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const toggleNotifications = () => setNotificationsOpen((prev) => !prev);
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
