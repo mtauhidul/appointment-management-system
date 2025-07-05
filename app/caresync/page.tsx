@@ -2,6 +2,7 @@
 
 import {
   ChartNoAxesCombined,
+  Database,
   Home,
   Layers,
   LayoutDashboard,
@@ -31,6 +32,7 @@ import useLoadDummyData from "@/hooks/useLoadDymmyData";
 
 // Import page components
 import Dashboard from "./dashboard/dashboard";
+import FHIRManagement from "./fhir/page";
 import PatientsSection from "./patients/page";
 import Reports from "./reports/page";
 import ResourcesSection from "./resources/page";
@@ -46,13 +48,20 @@ export default function Caresync() {
   useLoadDummyData();
 
   // Initialize section state from URL or localStorage or default to Dashboard
-  const [section, setSection] = useState<string>(
-    () => urlSection || localStorage.getItem("caresync-section") || "Dashboard"
-  );
+  const [section, setSection] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return (
+        urlSection || localStorage.getItem("caresync-section") || "Dashboard"
+      );
+    }
+    return urlSection || "Dashboard";
+  });
 
   // Sync section state with localStorage and URL
   useEffect(() => {
-    localStorage.setItem("caresync-section", section);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("caresync-section", section);
+    }
     router.replace(`?section=${section}`, { scroll: false });
   }, [section, router]);
 
@@ -85,6 +94,11 @@ export default function Caresync() {
         description: "System status monitoring",
       },
       {
+        title: "FHIR",
+        icon: Database,
+        description: "FHIR integration management",
+      },
+      {
         title: "Resources",
         icon: Layers,
         description: "Manage available resources",
@@ -100,6 +114,7 @@ export default function Caresync() {
     Reports: <Reports />,
     Roles: <Roles />,
     Status: <StatusSection />,
+    FHIR: <FHIRManagement />,
     Resources: <ResourcesSection />,
   };
 

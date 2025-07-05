@@ -1,5 +1,6 @@
 "use client";
 
+import { FHIRIntegrationPanel } from "@/components/fhir/fhir-integration-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -20,7 +21,6 @@ import { useEffect, useState } from "react";
 import AssistantsList from "./assistantsList/assistantsList";
 import DoctorsList from "./doctorsList/doctorsList";
 import ReceptionistsList from "./receptionistsList/receptionistsList";
-import { FHIRIntegrationPanel } from "@/components/fhir/fhir-integration-panel";
 
 const Roles = () => {
   const [activeTab, setActiveTab] = useState<

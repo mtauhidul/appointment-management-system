@@ -10,7 +10,7 @@ const firebaseConfig = {
   projectId: "ytfcs-shg",
   storageBucket: "ytfcs-shg.firebasestorage.app",
   messagingSenderId: "103277711232",
-  appId: "1:103277711232:web:ba346e5f37696f07f1bb65"
+  appId: "1:103277711232:web:ba346e5f37696f07f1bb65",
 };
 
 // Initialize Firebase

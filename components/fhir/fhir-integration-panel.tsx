@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Input 
-} from '@/components/ui/input';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -18,19 +14,25 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { 
-  AlertCircle, 
-  CheckCircle, 
-  Loader2, 
-  Search, 
-  UserPlus,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  useFHIRIntegration,
+  useFHIRPatients,
+  useFHIRPractitioners,
+} from "@/hooks/useFHIR";
+import { FHIRHelpers } from "@/lib/fhir/fhir-service";
+import {
   Activity,
+  AlertCircle,
+  CheckCircle,
   Database,
+  Loader2,
   RefreshCw,
-} from 'lucide-react';
-import { useFHIRIntegration, useFHIRPatients, useFHIRPractitioners } from '@/hooks/useFHIR';
-import { FHIRHelpers } from '@/lib/fhir/fhir-service';
+  Search,
+  UserPlus,
+} from "lucide-react";
+import React, { useState } from "react";
 
 interface FHIRIntegrationPanelProps {
   onPatientSync?: (patientId: string) => void;
@@ -41,8 +43,9 @@ export const FHIRIntegrationPanel: React.FC<FHIRIntegrationPanelProps> = ({
   onPatientSync,
   onPractitionerSync,
 }) => {
-  const { isConnected, isLoading, error, testConnection } = useFHIRIntegration();
-  
+  const { isConnected, isLoading, error, testConnection } =
+    useFHIRIntegration();
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -63,7 +66,10 @@ export const FHIRIntegrationPanel: React.FC<FHIRIntegrationPanelProps> = ({
                 Testing...
               </Badge>
             ) : isConnected ? (
-              <Badge variant="default" className="flex items-center gap-1 bg-green-600">
+              <Badge
+                variant="default"
+                className="flex items-center gap-1 bg-green-600"
+              >
                 <CheckCircle className="h-3 w-3" />
                 Connected
               </Badge>
@@ -79,7 +85,9 @@ export const FHIRIntegrationPanel: React.FC<FHIRIntegrationPanelProps> = ({
               onClick={testConnection}
               disabled={isLoading}
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+              />
             </Button>
           </div>
         </div>
@@ -90,19 +98,20 @@ export const FHIRIntegrationPanel: React.FC<FHIRIntegrationPanelProps> = ({
             <p className="text-sm text-red-800">{error}</p>
           </div>
         )}
-        
+
         {isConnected && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FHIRPatientSearch onPatientSync={onPatientSync} />
             <FHIRPractitionerSearch onPractitionerSync={onPractitionerSync} />
           </div>
         )}
-        
+
         {!isConnected && !isLoading && (
           <div className="text-center py-8">
             <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">
-              FHIR integration is not available. Check your connection and try again.
+              FHIR integration is not available. Check your connection and try
+              again.
             </p>
             <Button onClick={testConnection} disabled={isLoading}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -115,12 +124,13 @@ export const FHIRIntegrationPanel: React.FC<FHIRIntegrationPanelProps> = ({
   );
 };
 
-const FHIRPatientSearch: React.FC<{ onPatientSync?: (patientId: string) => void }> = ({
-  onPatientSync,
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
+const FHIRPatientSearch: React.FC<{
+  onPatientSync?: (patientId: string) => void;
+}> = ({ onPatientSync }) => {
+  const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { patients, isLoading, error, searchPatients, syncPatient } = useFHIRPatients();
+  const { patients, isLoading, error, searchPatients, syncPatient } =
+    useFHIRPatients();
 
   const handleSearch = async () => {
     if (searchTerm.trim()) {
@@ -143,11 +153,13 @@ const FHIRPatientSearch: React.FC<{ onPatientSync?: (patientId: string) => void 
           <CardContent className="p-6 text-center">
             <UserPlus className="h-8 w-8 text-blue-600 mx-auto mb-2" />
             <h3 className="font-medium text-gray-900">Search FHIR Patients</h3>
-            <p className="text-sm text-gray-600">Find and sync patients from EHR</p>
+            <p className="text-sm text-gray-600">
+              Find and sync patients from EHR
+            </p>
           </CardContent>
         </Card>
       </DialogTrigger>
-      
+
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Search FHIR Patients</DialogTitle>
@@ -155,16 +167,19 @@ const FHIRPatientSearch: React.FC<{ onPatientSync?: (patientId: string) => void 
             Search for patients in the eClinicalWorks EHR system
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="flex gap-2">
             <Input
               placeholder="Enter patient name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
             />
-            <Button onClick={handleSearch} disabled={isLoading || !searchTerm.trim()}>
+            <Button
+              onClick={handleSearch}
+              disabled={isLoading || !searchTerm.trim()}
+            >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -172,13 +187,13 @@ const FHIRPatientSearch: React.FC<{ onPatientSync?: (patientId: string) => void 
               )}
             </Button>
           </div>
-          
+
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
-          
+
           {patients.length > 0 && (
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {patients.map((patient) => (
@@ -204,7 +219,7 @@ const FHIRPatientSearch: React.FC<{ onPatientSync?: (patientId: string) => void 
               ))}
             </div>
           )}
-          
+
           {patients.length === 0 && searchTerm && !isLoading && !error && (
             <div className="text-center py-4">
               <p className="text-gray-600">No patients found</p>
@@ -216,12 +231,18 @@ const FHIRPatientSearch: React.FC<{ onPatientSync?: (patientId: string) => void 
   );
 };
 
-const FHIRPractitionerSearch: React.FC<{ onPractitionerSync?: (practitionerId: string) => void }> = ({
-  onPractitionerSync,
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
+const FHIRPractitionerSearch: React.FC<{
+  onPractitionerSync?: (practitionerId: string) => void;
+}> = ({ onPractitionerSync }) => {
+  const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { practitioners, isLoading, error, searchPractitioners, syncPractitioner } = useFHIRPractitioners();
+  const {
+    practitioners,
+    isLoading,
+    error,
+    searchPractitioners,
+    syncPractitioner,
+  } = useFHIRPractitioners();
 
   const handleSearch = async () => {
     if (searchTerm.trim()) {
@@ -243,12 +264,16 @@ const FHIRPractitionerSearch: React.FC<{ onPractitionerSync?: (practitionerId: s
         <Card className="cursor-pointer hover:shadow-md transition-shadow border-dashed">
           <CardContent className="p-6 text-center">
             <UserPlus className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <h3 className="font-medium text-gray-900">Search FHIR Practitioners</h3>
-            <p className="text-sm text-gray-600">Find and sync doctors from EHR</p>
+            <h3 className="font-medium text-gray-900">
+              Search FHIR Practitioners
+            </h3>
+            <p className="text-sm text-gray-600">
+              Find and sync doctors from EHR
+            </p>
           </CardContent>
         </Card>
       </DialogTrigger>
-      
+
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Search FHIR Practitioners</DialogTitle>
@@ -256,16 +281,19 @@ const FHIRPractitionerSearch: React.FC<{ onPractitionerSync?: (practitionerId: s
             Search for practitioners in the eClinicalWorks EHR system
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="flex gap-2">
             <Input
               placeholder="Enter practitioner name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
             />
-            <Button onClick={handleSearch} disabled={isLoading || !searchTerm.trim()}>
+            <Button
+              onClick={handleSearch}
+              disabled={isLoading || !searchTerm.trim()}
+            >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -273,13 +301,13 @@ const FHIRPractitionerSearch: React.FC<{ onPractitionerSync?: (practitionerId: s
               )}
             </Button>
           </div>
-          
+
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
-          
+
           {practitioners.length > 0 && (
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {practitioners.map((practitioner) => (
@@ -292,13 +320,15 @@ const FHIRPractitionerSearch: React.FC<{ onPractitionerSync?: (practitionerId: s
                       {FHIRHelpers.getDisplayName(practitioner.name)}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {FHIRHelpers.getEmail(practitioner.telecom) || 
-                       FHIRHelpers.getPhoneNumber(practitioner.telecom)}
+                      {FHIRHelpers.getEmail(practitioner.telecom) ||
+                        FHIRHelpers.getPhoneNumber(practitioner.telecom)}
                     </p>
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => practitioner.id && handleSyncPractitioner(practitioner.id)}
+                    onClick={() =>
+                      practitioner.id && handleSyncPractitioner(practitioner.id)
+                    }
                   >
                     Sync
                   </Button>
@@ -306,7 +336,7 @@ const FHIRPractitionerSearch: React.FC<{ onPractitionerSync?: (practitionerId: s
               ))}
             </div>
           )}
-          
+
           {practitioners.length === 0 && searchTerm && !isLoading && !error && (
             <div className="text-center py-4">
               <p className="text-gray-600">No practitioners found</p>

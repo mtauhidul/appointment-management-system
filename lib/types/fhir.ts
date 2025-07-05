@@ -28,7 +28,7 @@ export interface FHIRCodeableConcept {
 }
 
 export interface FHIRIdentifier {
-  use?: 'usual' | 'official' | 'temp' | 'secondary' | 'old';
+  use?: "usual" | "official" | "temp" | "secondary" | "old";
   type?: FHIRCodeableConcept;
   system?: string;
   value?: string;
@@ -49,7 +49,14 @@ export interface FHIRReference {
 }
 
 export interface FHIRHumanName {
-  use?: 'usual' | 'official' | 'temp' | 'nickname' | 'anonymous' | 'old' | 'maiden';
+  use?:
+    | "usual"
+    | "official"
+    | "temp"
+    | "nickname"
+    | "anonymous"
+    | "old"
+    | "maiden";
   text?: string;
   family?: string;
   given?: string[];
@@ -59,16 +66,16 @@ export interface FHIRHumanName {
 }
 
 export interface FHIRContactPoint {
-  system?: 'phone' | 'fax' | 'email' | 'pager' | 'url' | 'sms' | 'other';
+  system?: "phone" | "fax" | "email" | "pager" | "url" | "sms" | "other";
   value?: string;
-  use?: 'home' | 'work' | 'temp' | 'old' | 'mobile';
+  use?: "home" | "work" | "temp" | "old" | "mobile";
   rank?: number;
   period?: FHIRPeriod;
 }
 
 export interface FHIRAddress {
-  use?: 'home' | 'work' | 'temp' | 'old' | 'billing';
-  type?: 'postal' | 'physical' | 'both';
+  use?: "home" | "work" | "temp" | "old" | "billing";
+  type?: "postal" | "physical" | "both";
   text?: string;
   line?: string[];
   city?: string;
@@ -81,12 +88,12 @@ export interface FHIRAddress {
 
 // FHIR Patient Resource
 export interface FHIRPatient extends FHIRResource {
-  resourceType: 'Patient';
+  resourceType: "Patient";
   identifier?: FHIRIdentifier[];
   active?: boolean;
   name?: FHIRHumanName[];
   telecom?: FHIRContactPoint[];
-  gender?: 'male' | 'female' | 'other' | 'unknown';
+  gender?: "male" | "female" | "other" | "unknown";
   birthDate?: string;
   deceased?: boolean | string;
   address?: FHIRAddress[];
@@ -116,7 +123,7 @@ export interface FHIRPatientContact {
   name?: FHIRHumanName;
   telecom?: FHIRContactPoint[];
   address?: FHIRAddress;
-  gender?: 'male' | 'female' | 'other' | 'unknown';
+  gender?: "male" | "female" | "other" | "unknown";
   organization?: FHIRReference;
   period?: FHIRPeriod;
 }
@@ -128,18 +135,18 @@ export interface FHIRPatientCommunication {
 
 export interface FHIRPatientLink {
   other: FHIRReference;
-  type: 'replaced-by' | 'replaces' | 'refer' | 'seealso';
+  type: "replaced-by" | "replaces" | "refer" | "seealso";
 }
 
 // FHIR Practitioner Resource
 export interface FHIRPractitioner extends FHIRResource {
-  resourceType: 'Practitioner';
+  resourceType: "Practitioner";
   identifier?: FHIRIdentifier[];
   active?: boolean;
   name?: FHIRHumanName[];
   telecom?: FHIRContactPoint[];
   address?: FHIRAddress[];
-  gender?: 'male' | 'female' | 'other' | 'unknown';
+  gender?: "male" | "female" | "other" | "unknown";
   birthDate?: string;
   photo?: FHIRAttachment[];
   qualification?: FHIRPractitionerQualification[];
@@ -155,9 +162,19 @@ export interface FHIRPractitionerQualification {
 
 // FHIR Appointment Resource
 export interface FHIRAppointment extends FHIRResource {
-  resourceType: 'Appointment';
+  resourceType: "Appointment";
   identifier?: FHIRIdentifier[];
-  status: 'proposed' | 'pending' | 'booked' | 'arrived' | 'fulfilled' | 'cancelled' | 'noshow' | 'entered-in-error' | 'checked-in' | 'waitlist';
+  status:
+    | "proposed"
+    | "pending"
+    | "booked"
+    | "arrived"
+    | "fulfilled"
+    | "cancelled"
+    | "noshow"
+    | "entered-in-error"
+    | "checked-in"
+    | "waitlist";
   cancelationReason?: FHIRCodeableConcept;
   serviceCategory?: FHIRCodeableConcept[];
   serviceType?: FHIRCodeableConcept[];
@@ -183,14 +200,14 @@ export interface FHIRAppointment extends FHIRResource {
 export interface FHIRAppointmentParticipant {
   type?: FHIRCodeableConcept[];
   actor?: FHIRReference;
-  required?: 'required' | 'optional' | 'information-only';
-  status: 'accepted' | 'declined' | 'tentative' | 'needs-action';
+  required?: "required" | "optional" | "information-only";
+  status: "accepted" | "declined" | "tentative" | "needs-action";
   period?: FHIRPeriod;
 }
 
 // FHIR Schedule Resource
 export interface FHIRSchedule extends FHIRResource {
-  resourceType: 'Schedule';
+  resourceType: "Schedule";
   identifier?: FHIRIdentifier[];
   active?: boolean;
   serviceCategory?: FHIRCodeableConcept[];
@@ -203,9 +220,18 @@ export interface FHIRSchedule extends FHIRResource {
 
 // FHIR Bundle for search results
 export interface FHIRBundle extends FHIRResource {
-  resourceType: 'Bundle';
+  resourceType: "Bundle";
   identifier?: FHIRIdentifier;
-  type: 'document' | 'message' | 'transaction' | 'transaction-response' | 'batch' | 'batch-response' | 'history' | 'searchset' | 'collection';
+  type:
+    | "document"
+    | "message"
+    | "transaction"
+    | "transaction-response"
+    | "batch"
+    | "batch-response"
+    | "history"
+    | "searchset"
+    | "collection";
   timestamp?: string;
   total?: number;
   link?: FHIRBundleLink[];
@@ -228,12 +254,12 @@ export interface FHIRBundleEntry {
 }
 
 export interface FHIRBundleEntrySearch {
-  mode?: 'match' | 'include' | 'outcome';
+  mode?: "match" | "include" | "outcome";
   score?: number;
 }
 
 export interface FHIRBundleEntryRequest {
-  method: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method: "GET" | "HEAD" | "POST" | "PUT" | "DELETE" | "PATCH";
   url: string;
   ifNoneMatch?: string;
   ifModifiedSince?: string;
@@ -259,7 +285,7 @@ export interface FHIRSignature {
   data?: string;
 }
 
-import { DoctorAvailability } from './doctor';
+import { DoctorAvailability } from "./doctor";
 
 // Enhanced types for integration with existing system
 export interface EnhancedPatient {
@@ -286,7 +312,7 @@ export interface EnhancedPractitioner {
   availability: DoctorAvailability; // Existing availability structure
   // Additional FHIR sync metadata
   lastFhirSync?: Date;
-  fhirSyncStatus?: 'synced' | 'pending' | 'error';
+  fhirSyncStatus?: "synced" | "pending" | "error";
 }
 
 // FHIR API Response wrapper

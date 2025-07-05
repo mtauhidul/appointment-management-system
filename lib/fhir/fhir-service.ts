@@ -1,15 +1,15 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from "axios";
 import {
-  FHIRPatient,
-  FHIRPractitioner,
   FHIRAppointment,
   FHIRBundle,
+  FHIRContactPoint,
+  FHIRHumanName,
+  FHIRPatient,
+  FHIRPractitioner,
+  FHIRResource,
   FHIRResponse,
   FHIRSearchParams,
-  FHIRResource,
-  FHIRHumanName,
-  FHIRContactPoint,
-} from '../types/fhir';
+} from "../types/fhir";
 
 interface FHIRConfig {
   baseUrl: string;
@@ -34,7 +34,7 @@ interface FHIRError {
 }
 
 interface FHIRCapabilityStatement extends FHIRResource {
-  resourceType: 'CapabilityStatement';
+  resourceType: "CapabilityStatement";
   status: string;
   date: string;
   software?: {
@@ -57,14 +57,14 @@ export class FHIRService {
 
   constructor(config: FHIRConfig) {
     this.baseUrl = config.baseUrl;
-    
+
     // Setup HTTP client for direct API calls
     this.httpClient = axios.create({
       baseURL: this.baseUrl,
       timeout: config.timeout || 30000,
       headers: {
-        'Content-Type': 'application/fhir+json',
-        'Accept': 'application/fhir+json',
+        "Content-Type": "application/fhir+json",
+        Accept: "application/fhir+json",
       },
     });
 
@@ -82,7 +82,7 @@ export class FHIRService {
     this.httpClient.interceptors.response.use(
       (response) => response,
       (error) => {
-        console.error('FHIR API Error:', error.response?.data || error.message);
+        console.error("FHIR API Error:", error.response?.data || error.message);
         return Promise.reject(error);
       }
     );
@@ -95,9 +95,9 @@ export class FHIRService {
     try {
       // This would be used for SMART on FHIR authorization
       // For now, we'll work with direct API access
-      console.log('FHIR Service initialized for direct API access');
+      console.log("FHIR Service initialized for direct API access");
     } catch (error) {
-      console.warn('FHIR initialization warning:', error);
+      console.warn("FHIR initialization warning:", error);
     }
   }
 
@@ -110,12 +110,12 @@ export class FHIRService {
   ): Promise<FHIRResponse<FHIRBundle>> {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (params) {
         Object.entries(params).forEach(([key, value]) => {
           if (value !== undefined) {
             if (Array.isArray(value)) {
-              value.forEach(v => queryParams.append(key, v));
+              value.forEach((v) => queryParams.append(key, v));
             } else {
               queryParams.append(key, value);
             }
@@ -123,7 +123,9 @@ export class FHIRService {
         });
       }
 
-      const url = `/${resourceType}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const url = `/${resourceType}${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
       const response = await this.httpClient.get(url);
 
       return {
@@ -134,7 +136,10 @@ export class FHIRService {
     } catch (error: unknown) {
       const fhirError = error as FHIRError;
       return {
-        error: fhirError.response?.data?.issue?.[0]?.details?.text || fhirError.message || 'FHIR API Error',
+        error:
+          fhirError.response?.data?.issue?.[0]?.details?.text ||
+          fhirError.message ||
+          "FHIR API Error",
         status: fhirError.response?.status || 500,
         timestamp: new Date(),
       };
@@ -150,7 +155,7 @@ export class FHIRService {
   ): Promise<FHIRResponse<T>> {
     try {
       const response = await this.httpClient.get(`/${resourceType}/${id}`);
-      
+
       return {
         data: response.data,
         status: response.status,
@@ -159,7 +164,10 @@ export class FHIRService {
     } catch (error: unknown) {
       const fhirError = error as FHIRError;
       return {
-        error: fhirError.response?.data?.issue?.[0]?.details?.text || fhirError.message || 'Resource not found',
+        error:
+          fhirError.response?.data?.issue?.[0]?.details?.text ||
+          fhirError.message ||
+          "Resource not found",
         status: fhirError.response?.status || 404,
         timestamp: new Date(),
       };
@@ -177,21 +185,21 @@ export class FHIRService {
     _count?: number;
   }): Promise<FHIRResponse<FHIRBundle>> {
     const searchParams: FHIRSearchParams = {};
-    
+
     if (params?.name) searchParams.name = params.name;
     if (params?.identifier) searchParams.identifier = params.identifier;
     if (params?.birthdate) searchParams.birthdate = params.birthdate;
     if (params?.gender) searchParams.gender = params.gender;
     if (params?._count) searchParams._count = params._count.toString();
 
-    return this.search('Patient', searchParams);
+    return this.search("Patient", searchParams);
   }
 
   /**
    * Get patient by ID
    */
   async getPatient(id: string): Promise<FHIRResponse<FHIRPatient>> {
-    return this.read<FHIRPatient>('Patient', id);
+    return this.read<FHIRPatient>("Patient", id);
   }
 
   /**
@@ -204,20 +212,20 @@ export class FHIRService {
     _count?: number;
   }): Promise<FHIRResponse<FHIRBundle>> {
     const searchParams: FHIRSearchParams = {};
-    
+
     if (params?.name) searchParams.name = params.name;
     if (params?.identifier) searchParams.identifier = params.identifier;
     if (params?.specialty) searchParams.specialty = params.specialty;
     if (params?._count) searchParams._count = params._count.toString();
 
-    return this.search('Practitioner', searchParams);
+    return this.search("Practitioner", searchParams);
   }
 
   /**
    * Get practitioner by ID
    */
   async getPractitioner(id: string): Promise<FHIRResponse<FHIRPractitioner>> {
-    return this.read<FHIRPractitioner>('Practitioner', id);
+    return this.read<FHIRPractitioner>("Practitioner", id);
   }
 
   /**
@@ -231,21 +239,21 @@ export class FHIRService {
     _count?: number;
   }): Promise<FHIRResponse<FHIRBundle>> {
     const searchParams: FHIRSearchParams = {};
-    
+
     if (params?.patient) searchParams.patient = params.patient;
     if (params?.practitioner) searchParams.practitioner = params.practitioner;
     if (params?.date) searchParams.date = params.date;
     if (params?.status) searchParams.status = params.status;
     if (params?._count) searchParams._count = params._count.toString();
 
-    return this.search('Appointment', searchParams);
+    return this.search("Appointment", searchParams);
   }
 
   /**
    * Get appointment by ID
    */
   async getAppointment(id: string): Promise<FHIRResponse<FHIRAppointment>> {
-    return this.read<FHIRAppointment>('Appointment', id);
+    return this.read<FHIRAppointment>("Appointment", id);
   }
 
   /**
@@ -258,13 +266,13 @@ export class FHIRService {
     _count?: number;
   }): Promise<FHIRResponse<FHIRBundle>> {
     const searchParams: FHIRSearchParams = {};
-    
+
     if (params?.actor) searchParams.actor = params.actor;
     if (params?.date) searchParams.date = params.date;
     if (params?.specialty) searchParams.specialty = params.specialty;
     if (params?._count) searchParams._count = params._count.toString();
 
-    return this.search('Schedule', searchParams);
+    return this.search("Schedule", searchParams);
   }
 
   /**
@@ -272,12 +280,12 @@ export class FHIRService {
    */
   async updateAppointmentStatus(
     appointmentId: string,
-    status: FHIRAppointment['status']
+    status: FHIRAppointment["status"]
   ): Promise<FHIRResponse<FHIRAppointment>> {
     try {
       // First, get the current appointment
       const currentAppointment = await this.getAppointment(appointmentId);
-      
+
       if (currentAppointment.error) {
         return currentAppointment;
       }
@@ -302,7 +310,10 @@ export class FHIRService {
     } catch (error: unknown) {
       const fhirError = error as FHIRError;
       return {
-        error: fhirError.response?.data?.issue?.[0]?.details?.text || fhirError.message || 'Update failed',
+        error:
+          fhirError.response?.data?.issue?.[0]?.details?.text ||
+          fhirError.message ||
+          "Update failed",
         status: fhirError.response?.status || 500,
         timestamp: new Date(),
       };
@@ -314,8 +325,8 @@ export class FHIRService {
    */
   async testConnection(): Promise<FHIRResponse<FHIRCapabilityStatement>> {
     try {
-      const response = await this.httpClient.get('/metadata');
-      
+      const response = await this.httpClient.get("/metadata");
+
       return {
         data: response.data,
         status: response.status,
@@ -324,7 +335,10 @@ export class FHIRService {
     } catch (error: unknown) {
       const fhirError = error as FHIRError;
       return {
-        error: fhirError.response?.data?.issue?.[0]?.details?.text || fhirError.message || 'Connection failed',
+        error:
+          fhirError.response?.data?.issue?.[0]?.details?.text ||
+          fhirError.message ||
+          "Connection failed",
         status: fhirError.response?.status || 500,
         timestamp: new Date(),
       };
@@ -334,14 +348,16 @@ export class FHIRService {
   /**
    * Get capability statement (server metadata)
    */
-  async getCapabilityStatement(): Promise<FHIRResponse<FHIRCapabilityStatement>> {
+  async getCapabilityStatement(): Promise<
+    FHIRResponse<FHIRCapabilityStatement>
+  > {
     return this.testConnection();
   }
 }
 
 // Default FHIR service instance for eClinicalWorks
 export const fhirService = new FHIRService({
-  baseUrl: 'https://fhir4.eclinicalworks.com/fhir/r4/JFEECD',
+  baseUrl: "https://fhir4.eclinicalworks.com/fhir/r4/JFEECD",
   timeout: 30000,
 });
 
@@ -351,54 +367,55 @@ export const FHIRHelpers = {
    * Extract human-readable name from FHIR HumanName array
    */
   getDisplayName: (names?: FHIRHumanName[]): string => {
-    if (!names || names.length === 0) return 'Unknown';
-    
-    const officialName = names.find(name => name.use === 'official');
-    const usualName = names.find(name => name.use === 'usual');
+    if (!names || names.length === 0) return "Unknown";
+
+    const officialName = names.find((name) => name.use === "official");
+    const usualName = names.find((name) => name.use === "usual");
     const anyName = names[0];
-    
+
     const nameToUse = officialName || usualName || anyName;
-    
+
     if (nameToUse.text) return nameToUse.text;
-    
+
     const parts = [];
     if (nameToUse.prefix) parts.push(...nameToUse.prefix);
     if (nameToUse.given) parts.push(...nameToUse.given);
     if (nameToUse.family) parts.push(nameToUse.family);
     if (nameToUse.suffix) parts.push(...nameToUse.suffix);
-    
-    return parts.join(' ') || 'Unknown';
+
+    return parts.join(" ") || "Unknown";
   },
 
   /**
    * Extract phone number from FHIR ContactPoint array
    */
   getPhoneNumber: (telecoms?: FHIRContactPoint[]): string => {
-    if (!telecoms) return '';
-    
-    const phone = telecoms.find(t => t.system === 'phone' && t.use === 'work') ||
-                  telecoms.find(t => t.system === 'phone' && t.use === 'home') ||
-                  telecoms.find(t => t.system === 'phone');
-    
-    return phone?.value || '';
+    if (!telecoms) return "";
+
+    const phone =
+      telecoms.find((t) => t.system === "phone" && t.use === "work") ||
+      telecoms.find((t) => t.system === "phone" && t.use === "home") ||
+      telecoms.find((t) => t.system === "phone");
+
+    return phone?.value || "";
   },
 
   /**
    * Extract email from FHIR ContactPoint array
    */
   getEmail: (telecoms?: FHIRContactPoint[]): string => {
-    if (!telecoms) return '';
-    
-    const email = telecoms.find(t => t.system === 'email');
-    return email?.value || '';
+    if (!telecoms) return "";
+
+    const email = telecoms.find((t) => t.system === "email");
+    return email?.value || "";
   },
 
   /**
    * Format FHIR date to readable format
    */
   formatDate: (fhirDate?: string): string => {
-    if (!fhirDate) return '';
-    
+    if (!fhirDate) return "";
+
     try {
       return new Date(fhirDate).toLocaleDateString();
     } catch {
@@ -410,8 +427,8 @@ export const FHIRHelpers = {
    * Format FHIR datetime to readable format
    */
   formatDateTime: (fhirDateTime?: string): string => {
-    if (!fhirDateTime) return '';
-    
+    if (!fhirDateTime) return "";
+
     try {
       return new Date(fhirDateTime).toLocaleString();
     } catch {

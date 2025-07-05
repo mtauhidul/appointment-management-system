@@ -5,6 +5,7 @@ import Papa from "papaparse";
 import { useState } from "react";
 import * as XLSX from "xlsx";
 
+import { FHIRIntegrationPanel } from "@/components/fhir/fhir-integration-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -29,7 +30,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FHIRIntegrationPanel } from "@/components/fhir/fhir-integration-panel";
 
 const PatientsSection = () => {
   const [files, setFiles] = useState<FileData[]>([]);
