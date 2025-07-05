@@ -1,6 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { integratedDataService } from '../lib/services/integrated-data-service';
-import { FHIRPatient, FHIRPractitioner, EnhancedPatient } from '../lib/types/fhir';
+import { useCallback, useEffect, useState } from "react";
+import { integratedDataService } from "../lib/services/integrated-data-service";
+import {
+  EnhancedPatient,
+  FHIRPatient,
+  FHIRPractitioner,
+} from "../lib/types/fhir";
 
 /**
  * Custom hook for FHIR integration
@@ -17,12 +21,14 @@ export const useFHIRIntegration = () => {
         setIsLoading(true);
         const success = await integratedDataService.initializeFHIRIntegration();
         setIsConnected(success);
-        
+
         if (!success) {
-          setError('Failed to connect to FHIR server');
+          setError("Failed to connect to FHIR server");
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'FHIR initialization failed');
+        setError(
+          err instanceof Error ? err.message : "FHIR initialization failed"
+        );
         setIsConnected(false);
       } finally {
         setIsLoading(false);
@@ -36,17 +42,18 @@ export const useFHIRIntegration = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const result = await integratedDataService.testFHIRConnection();
       setIsConnected(result.connected);
-      
+
       if (!result.connected) {
-        setError(result.error || 'Connection test failed');
+        setError(result.error || "Connection test failed");
       }
-      
+
       return result;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Connection test failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Connection test failed";
       setError(errorMessage);
       setIsConnected(false);
       return { connected: false, error: errorMessage };
@@ -68,7 +75,9 @@ export const useFHIRIntegration = () => {
  */
 export const useFHIRPatients = () => {
   const [patients, setPatients] = useState<FHIRPatient[]>([]);
-  const [enhancedPatients, setEnhancedPatients] = useState<EnhancedPatient[]>([]);
+  const [enhancedPatients, setEnhancedPatients] = useState<EnhancedPatient[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,13 +85,16 @@ export const useFHIRPatients = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const results = await integratedDataService.searchPatientsInFHIR(searchTerm);
+
+      const results = await integratedDataService.searchPatientsInFHIR(
+        searchTerm
+      );
       setPatients(results);
-      
+
       return results;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Patient search failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Patient search failed";
       setError(errorMessage);
       return [];
     } finally {
@@ -94,18 +106,21 @@ export const useFHIRPatients = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const synced = await integratedDataService.syncPatientFromFHIR(fhirPatientId);
-      
+
+      const synced = await integratedDataService.syncPatientFromFHIR(
+        fhirPatientId
+      );
+
       if (synced) {
         // Refresh enhanced patients list
         const updated = await integratedDataService.getEnhancedPatients();
         setEnhancedPatients(updated);
       }
-      
+
       return synced;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Patient sync failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Patient sync failed";
       setError(errorMessage);
       return null;
     } finally {
@@ -113,46 +128,50 @@ export const useFHIRPatients = () => {
     }
   }, []);
 
-  const updatePatientStatus = useCallback(async (
-    patientId: string,
-    status: string,
-    roomId?: string,
-    appointmentId?: string
-  ) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      await integratedDataService.updatePatientWorkflowStatus(
-        patientId,
-        status,
-        roomId,
-        appointmentId
-      );
-      
-      // Refresh enhanced patients list
-      const updated = await integratedDataService.getEnhancedPatients();
-      setEnhancedPatients(updated);
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Status update failed';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const updatePatientStatus = useCallback(
+    async (
+      patientId: string,
+      status: string,
+      roomId?: string,
+      appointmentId?: string
+    ) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        await integratedDataService.updatePatientWorkflowStatus(
+          patientId,
+          status,
+          roomId,
+          appointmentId
+        );
+
+        // Refresh enhanced patients list
+        const updated = await integratedDataService.getEnhancedPatients();
+        setEnhancedPatients(updated);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Status update failed";
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   const loadEnhancedPatients = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const results = await integratedDataService.getEnhancedPatients();
       setEnhancedPatients(results);
-      
+
       return results;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load patients';
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load patients";
       setError(errorMessage);
       return [];
     } finally {
@@ -184,13 +203,16 @@ export const useFHIRPractitioners = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const results = await integratedDataService.searchPractitionersInFHIR(searchTerm);
+
+      const results = await integratedDataService.searchPractitionersInFHIR(
+        searchTerm
+      );
       setPractitioners(results);
-      
+
       return results;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Practitioner search failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Practitioner search failed";
       setError(errorMessage);
       return [];
     } finally {
@@ -202,12 +224,15 @@ export const useFHIRPractitioners = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const synced = await integratedDataService.syncPractitionerFromFHIR(fhirPractitionerId);
-      
+
+      const synced = await integratedDataService.syncPractitionerFromFHIR(
+        fhirPractitionerId
+      );
+
       return synced;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Practitioner sync failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Practitioner sync failed";
       setError(errorMessage);
       return null;
     } finally {
@@ -239,13 +264,14 @@ export const usePatientWithFHIR = (patientId: string | null) => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const data = await integratedDataService.getPatientWithFHIRData(id);
       setPatientData(data);
-      
+
       return data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load patient data';
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load patient data";
       setError(errorMessage);
       return { workflow: null, fhir: null };
     } finally {
@@ -265,6 +291,8 @@ export const usePatientWithFHIR = (patientId: string | null) => {
     patientData,
     isLoading,
     error,
-    refreshPatientData: patientId ? () => loadPatientData(patientId) : undefined,
+    refreshPatientData: patientId
+      ? () => loadPatientData(patientId)
+      : undefined,
   };
 };
