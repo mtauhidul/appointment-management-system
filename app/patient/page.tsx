@@ -17,12 +17,12 @@ import {
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, SquareUser, Text } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Dashboard from "./dashboard/dashboard";
 import Kiosk from "./kiosk/kiosk";
 import Profile from "./profile/profile";
 
-export default function Patient() {
+function PatientContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSection = searchParams.get("section");
@@ -88,5 +88,13 @@ export default function Patient() {
         {componentMapping[section as keyof typeof componentMapping]}
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function Patient() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PatientContent />
+    </Suspense>
   );
 }

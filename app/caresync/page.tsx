@@ -11,7 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -39,7 +39,7 @@ import ResourcesSection from "./resources/page";
 import Roles from "./roles/page";
 import StatusSection from "./status/page";
 
-export default function Caresync() {
+function CaresyncContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSection = searchParams.get("section");
@@ -167,5 +167,13 @@ export default function Caresync() {
         </main>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function Caresync() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CaresyncContent />
+    </Suspense>
   );
 }

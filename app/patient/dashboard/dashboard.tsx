@@ -121,8 +121,7 @@ const initialAppointments: Appointment[] = [
 // Available time slots for selected date
 const getTimeSlots = (
   providerId: number,
-  date: Date,
-  appointments: Appointment[]
+  date: Date
 ): string[] => {
   // In a real app, this would come from an API based on provider availability
   // Adding some variety to simulate real provider schedules
@@ -156,7 +155,7 @@ const Dashboard = () => {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
   const [appointmentDetailsOpen, setAppointmentDetailsOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
 
   // Booking state
@@ -212,7 +211,7 @@ const Dashboard = () => {
   };
 
   // Start rescheduling process
-  const handleStartReschedule = (appointment: any) => {
+  const handleStartReschedule = (appointment: Appointment) => {
     setIsRescheduling(true);
     setSelectedAppointment(appointment);
     setSelectedProvider(appointment.providerId);
@@ -233,7 +232,7 @@ const Dashboard = () => {
 
     // Get available time slots for the selected date and provider
     if (date && selectedProvider) {
-      setAvailableTimeSlots(getTimeSlots(selectedProvider, date, appointments));
+      setAvailableTimeSlots(getTimeSlots(selectedProvider, date));
     } else {
       setAvailableTimeSlots([]);
     }
@@ -302,7 +301,7 @@ const Dashboard = () => {
   };
 
   // Show appointment details
-  const handleShowAppointmentDetails = (appointment: any) => {
+  const handleShowAppointmentDetails = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setAppointmentDetailsOpen(true);
   };
@@ -342,7 +341,7 @@ const Dashboard = () => {
   });
 
   // Check if an appointment is in the past
-  const isAppointmentPast = (appointment: any) => {
+  const isAppointmentPast = (appointment: Appointment) => {
     const today = new Date();
     const appointmentDate = new Date(appointment.date);
     appointmentDate.setHours(23, 59, 59);

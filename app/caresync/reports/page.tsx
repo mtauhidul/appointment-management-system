@@ -2,7 +2,7 @@
 
 import { addDays, format } from "date-fns";
 import { Activity, CalendarIcon, UserCog, Users, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -100,7 +100,7 @@ const MedicalAnalytics = () => {
   };
 
   // Generate report based on selected dates
-  const handleFilter = () => {
+  const handleFilter = useCallback(() => {
     if (!fromDate || !toDate) return;
 
     setIsLoading(true);
@@ -168,12 +168,12 @@ const MedicalAnalytics = () => {
         sheetCloseRef.current.click();
       }
     }, 800);
-  };
+  }, [fromDate, toDate]);
 
   // Initialize data
   useEffect(() => {
     handleFilter();
-  }, []);
+  }, [handleFilter]);
 
   // Chart tooltip
   const CustomTooltip = ({
