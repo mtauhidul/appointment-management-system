@@ -1,6 +1,5 @@
 "use client";
 
-import { FHIRIntegrationPanel } from "@/components/fhir/fhir-integration-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -158,14 +157,6 @@ const Roles = () => {
       </div>
 
       <Separator className="my-2 sm:my-3" />
-
-      {/* FHIR Integration Panel for Practitioner Sync */}
-      <FHIRIntegrationPanel
-        onPractitionerSync={(practitionerId) => {
-          console.log("Practitioner synced to system:", practitionerId);
-          // Optionally refresh the doctors list or show success notification
-        }}
-      />
 
       <Tabs
         value={activeTab}

@@ -5,7 +5,6 @@ import Papa from "papaparse";
 import { useState } from "react";
 import * as XLSX from "xlsx";
 
-import { FHIRIntegrationPanel } from "@/components/fhir/fhir-integration-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -183,21 +182,9 @@ const PatientsSection = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-semibold">Patient Records</h1>
         <div className="text-sm text-gray-600">
-          Manage patient data through file uploads or FHIR integration
+          Manage patient data through file uploads
         </div>
       </div>
-
-      {/* FHIR Integration Panel */}
-      <FHIRIntegrationPanel
-        onPatientSync={(patientId) => {
-          console.log("Patient synced:", patientId);
-          // You can add additional logic here if needed
-        }}
-        onPractitionerSync={(practitionerId) => {
-          console.log("Practitioner synced:", practitionerId);
-          // You can add additional logic here if needed
-        }}
-      />
 
       {/* File Upload Section */}
       <Card>
