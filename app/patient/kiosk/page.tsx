@@ -1,43 +1,47 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useKioskStore, useKioskProgress, getStepTitle } from '@/lib/store/kiosk/useKioskStore';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Home } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { PatientCheckInData } from '@/lib/types/kiosk';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  getStepTitle,
+  useKioskProgress,
+  useKioskStore,
+} from "@/lib/store/kiosk/useKioskStore";
+import { PatientCheckInData } from "@/lib/types/kiosk";
+import { AlertCircle, Home } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // Step Components (to be created)
-import WelcomeStep from '@/components/kiosk/WelcomeStep';
-import UserInfoStep from '@/components/kiosk/UserInfoStep';
-import DemographicsStep from '@/components/kiosk/DemographicsStep';
-import AllergiesStep from '@/components/kiosk/AllergiesStep';
-import MedicationsStep from '@/components/kiosk/MedicationsStep';
-import FamilyHistoryStep from '@/components/kiosk/FamilyHistoryStep';
-import MedicalHistoryStep from '@/components/kiosk/MedicalHistoryStep';
-import SurgicalHistoryStep from '@/components/kiosk/SurgicalHistoryStep';
-import SocialHistoryStep from '@/components/kiosk/SocialHistoryStep';
-import ShoeSizeStep from '@/components/kiosk/ShoeSizeStep';
-import HippaPolicyStep from '@/components/kiosk/HippaPolicyStep';
-import PracticePoliciesStep from '@/components/kiosk/PracticePoliciesStep';
-import SurveyStep from '@/components/kiosk/SurveyStep';
-import ReviewStep from '@/components/kiosk/ReviewStep';
-import CompleteStep from '@/components/kiosk/CompleteStep';
+import AllergiesStep from "@/components/kiosk/AllergiesStep";
+import CompleteStep from "@/components/kiosk/CompleteStep";
+import DemographicsStep from "@/components/kiosk/DemographicsStep";
+import FamilyHistoryStep from "@/components/kiosk/FamilyHistoryStep";
+import HippaPolicyStep from "@/components/kiosk/HippaPolicyStep";
+import MedicalHistoryStep from "@/components/kiosk/MedicalHistoryStep";
+import MedicationsStep from "@/components/kiosk/MedicationsStep";
+import PracticePoliciesStep from "@/components/kiosk/PracticePoliciesStep";
+import ReviewStep from "@/components/kiosk/ReviewStep";
+import ShoeSizeStep from "@/components/kiosk/ShoeSizeStep";
+import SocialHistoryStep from "@/components/kiosk/SocialHistoryStep";
+import SurgicalHistoryStep from "@/components/kiosk/SurgicalHistoryStep";
+import SurveyStep from "@/components/kiosk/SurveyStep";
+import UserInfoStep from "@/components/kiosk/UserInfoStep";
+import WelcomeStep from "@/components/kiosk/WelcomeStep";
 
 export default function KioskPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const { 
-    progress, 
-    isLoading, 
-    errors, 
-    updateData, 
-    goToNextStep, 
-    goToPreviousStep, 
+  const {
+    progress,
+    isLoading,
+    errors,
+    updateData,
+    goToNextStep,
+    goToPreviousStep,
     clearErrors,
-    resetKiosk 
+    resetKiosk,
   } = useKioskStore();
 
   const progressInfo = useKioskProgress();
@@ -62,14 +66,14 @@ export default function KioskPage() {
 
   const handleHome = () => {
     resetKiosk();
-    router.push('/patient');
+    router.push("/patient");
   };
 
   // Show errors if any
   useEffect(() => {
     if (errors.length > 0) {
       // Errors will be displayed in the UI instead of toast
-      console.log('Kiosk errors:', errors);
+      console.log("Kiosk errors:", errors);
     }
   }, [errors]);
 
@@ -90,47 +94,51 @@ export default function KioskPage() {
       data: progress.data,
       onNext: handleNext,
       onBack: handleBack,
-      onSkip: () => goToNextStep()
+      onSkip: () => goToNextStep(),
     };
 
     switch (progress.currentStep) {
-      case 'welcome':
+      case "welcome":
         return <WelcomeStep {...stepProps} />;
-      case 'user-info':
+      case "user-info":
         return <UserInfoStep {...stepProps} />;
-      case 'demographics':
+      case "demographics":
         return <DemographicsStep {...stepProps} />;
-      case 'allergies':
+      case "allergies":
         return <AllergiesStep {...stepProps} />;
-      case 'medications':
+      case "medications":
         return <MedicationsStep {...stepProps} />;
-      case 'family-history':
+      case "family-history":
         return <FamilyHistoryStep {...stepProps} />;
-      case 'medical-history':
+      case "medical-history":
         return <MedicalHistoryStep {...stepProps} />;
-      case 'surgical-history':
+      case "surgical-history":
         return <SurgicalHistoryStep {...stepProps} />;
-      case 'social-history':
+      case "social-history":
         return <SocialHistoryStep {...stepProps} />;
-      case 'shoe-size':
+      case "shoe-size":
         return <ShoeSizeStep {...stepProps} />;
-      case 'hippa-policy':
-        return <HippaPolicyStep 
-          {...stepProps} 
-          title="HIPAA Privacy Policy" 
-          description="Please review and sign the HIPAA Privacy Policy"
-        />;
-      case 'practice-policies':
-        return <PracticePoliciesStep 
-          {...stepProps} 
-          title="Practice Policies" 
-          description="Please review and sign our practice policies"
-        />;
-      case 'survey':
+      case "hippa-policy":
+        return (
+          <HippaPolicyStep
+            {...stepProps}
+            title="HIPAA Privacy Policy"
+            description="Please review and sign the HIPAA Privacy Policy"
+          />
+        );
+      case "practice-policies":
+        return (
+          <PracticePoliciesStep
+            {...stepProps}
+            title="Practice Policies"
+            description="Please review and sign our practice policies"
+          />
+        );
+      case "survey":
         return <SurveyStep {...stepProps} />;
-      case 'review':
+      case "review":
         return <ReviewStep {...stepProps} />;
-      case 'complete':
+      case "complete":
         return <CompleteStep {...stepProps} />;
       default:
         return <div>Unknown step</div>;
@@ -147,13 +155,15 @@ export default function KioskPage() {
               <span className="text-white font-bold text-lg">K</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Patient Check-in</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Patient Check-in
+              </h1>
               <p className="text-gray-600">YTFCS Healthcare Management</p>
             </div>
           </div>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             onClick={handleHome}
             className="flex items-center space-x-2"
           >
@@ -163,24 +173,26 @@ export default function KioskPage() {
         </div>
 
         {/* Progress Bar */}
-        {progress.currentStep !== 'welcome' && progress.currentStep !== 'complete' && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">
-                  {getStepTitle(progress.currentStep)}
-                </span>
-                <span className="text-sm text-gray-500">
-                  {progressInfo.completedCount} of {progressInfo.totalSteps} completed
-                </span>
-              </div>
-              <Progress 
-                value={progressInfo.progressPercentage} 
-                className="w-full h-2"
-              />
-            </CardContent>
-          </Card>
-        )}
+        {progress.currentStep !== "welcome" &&
+          progress.currentStep !== "complete" && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    {getStepTitle(progress.currentStep)}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {progressInfo.completedCount} of {progressInfo.totalSteps}{" "}
+                    completed
+                  </span>
+                </div>
+                <Progress
+                  value={progressInfo.progressPercentage}
+                  className="w-full h-2"
+                />
+              </CardContent>
+            </Card>
+          )}
       </div>
 
       {/* Main Content */}
@@ -212,7 +224,9 @@ export default function KioskPage() {
             <CardContent className="pt-0">
               <ul className="list-disc list-inside text-sm text-red-700">
                 {errors.map((error, index) => (
-                  <li key={index}>{error.field}: {error.message}</li>
+                  <li key={index}>
+                    {error.field}: {error.message}
+                  </li>
                 ))}
               </ul>
             </CardContent>
