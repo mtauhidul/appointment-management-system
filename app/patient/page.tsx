@@ -19,7 +19,7 @@ import { LayoutDashboard, SquareUser, Text } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Dashboard from "./dashboard/dashboard";
-import Kiosk from "./kiosk/kiosk";
+import Kiosk from "./kiosk/kiosk-dashboard";
 import Profile from "./profile/profile";
 
 function PatientContent() {
@@ -28,11 +28,23 @@ function PatientContent() {
   const urlSection = searchParams.get("section");
 
   const [section, setSection] = useState<string>(() => {
-    return urlSection || localStorage.getItem("patient-section") || "Dashboard";
+    return urlSection || "Appointments";
   });
 
+  // Handle localStorage on client side only
   useEffect(() => {
-    localStorage.setItem("patient-section", section);
+    if (typeof window !== 'undefined') {
+      const savedSection = localStorage.getItem("patient-section");
+      if (!urlSection && savedSection) {
+        setSection(savedSection);
+      }
+    }
+  }, [urlSection]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("patient-section", section);
+    }
     router.replace(`?section=${section}`, { scroll: false });
   }, [section, router]);
 
@@ -70,7 +82,7 @@ function PatientContent() {
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
                   <BreadcrumbLink
-                    onClick={() => setSection("Dashboard")}
+                    onClick={() => setSection("Appointments")}
                     className="cursor-pointer"
                   >
                     Patient

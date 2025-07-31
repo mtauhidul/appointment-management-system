@@ -1,0 +1,183 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { StepComponentProps } from '@/lib/types/kiosk';
+import { ArrowLeft, ArrowRight, Heart, Plus, X } from 'lucide-react';
+
+const COMMON_CONDITIONS = [
+  'Diabetes',
+  'High Blood Pressure',
+  'Heart Disease',
+  'Asthma',
+  'Arthritis',
+  'Depression',
+  'Anxiety',
+  'High Cholesterol',
+  'Thyroid Disease',
+  'COPD',
+  'Kidney Disease',
+  'Liver Disease',
+  'Cancer',
+  'Stroke',
+  'Seizures',
+  'Migraines'
+];
+
+export default function MedicalHistoryStep({ data, onNext, onBack }: StepComponentProps) {
+  const [medicalHistory, setMedicalHistory] = useState<string[]>(data.medicalHistory || []);
+  const [customCondition, setCustomCondition] = useState('');
+
+  const addCommonCondition = (condition: string) => {
+    if (!medicalHistory.includes(condition)) {
+      setMedicalHistory([...medicalHistory, condition]);
+    }
+  };
+
+  const addCustomCondition = () => {
+    if (customCondition.trim() && !medicalHistory.includes(customCondition.trim())) {
+      setMedicalHistory([...medicalHistory, customCondition.trim()]);
+      setCustomCondition('');
+    }
+  };
+
+  const removeCondition = (index: number) => {
+    setMedicalHistory(medicalHistory.filter((_, i) => i !== index));
+  };
+
+  const handleContinue = () => {
+    onNext({ medicalHistory });
+  };
+
+  const handleNoConditions = () => {
+    setMedicalHistory([]);
+    onNext({ medicalHistory: [] });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Heart className="w-5 h-5" />
+            <span>Medical History</span>
+          </CardTitle>
+          <p className="text-gray-600">
+            Please select any medical conditions you currently have or have had in the past.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Current Conditions */}
+          {medicalHistory.length > 0 && (
+            <div className="space-y-2">
+              <Label>Your Medical History:</Label>
+              <div className="flex flex-wrap gap-2">
+                {medicalHistory.map((condition, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2"
+                  >
+                    <span className="text-blue-800">{condition}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeCondition(index)}
+                      className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Common Conditions */}
+          <div className="space-y-3">
+            <Label>Common Medical Conditions (click to add):</Label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {COMMON_CONDITIONS.map((condition) => (
+                <Button
+                  key={condition}
+                  variant={medicalHistory.includes(condition) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => addCommonCondition(condition)}
+                  disabled={medicalHistory.includes(condition)}
+                  className="justify-start text-left text-xs"
+                >
+                  {condition}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Condition Input */}
+          <div className="space-y-3">
+            <Label>Add Other Condition:</Label>
+            <div className="flex space-x-2">
+              <Input
+                value={customCondition}
+                onChange={(e) => setCustomCondition(e.target.value)}
+                placeholder="Enter condition name..."
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomCondition();
+                  }
+                }}
+              />
+              <Button
+                onClick={addCustomCondition}
+                disabled={!customCondition.trim() || medicalHistory.includes(customCondition.trim())}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* No Conditions Option */}
+          <div className="border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={handleNoConditions}
+              className="w-full flex items-center justify-center space-x-2"
+            >
+              <span>I have no significant medical history</span>
+            </Button>
+          </div>
+
+          {/* Information Note */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> This includes current conditions, past conditions that required treatment, and chronic conditions you manage with medication or lifestyle changes.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-between">
+        <Button 
+          variant="outline" 
+          onClick={onBack}
+          className="flex items-center space-x-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </Button>
+        
+        <Button 
+          onClick={handleContinue}
+          className="flex items-center space-x-2"
+        >
+          <span>Continue</span>
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
