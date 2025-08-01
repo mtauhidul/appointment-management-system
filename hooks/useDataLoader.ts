@@ -5,10 +5,12 @@ import { useReceptionistStore } from '@/lib/store/useReceptionistStore';
 import { useRoomStore } from '@/lib/store/useRoomStore';
 import { useStatusStore } from '@/lib/store/useStatusStore';
 import { useAssistantStore } from '@/lib/store/useAssistantStore';
+import { usePatientStore } from '@/lib/store/usePatientStore';
 import { Doctor } from '@/lib/types/doctor';
 import { Receptionist } from '@/lib/types/receptionist';
 import { Status } from '@/lib/types/status';
 import { Assistant } from '@/lib/types/assistant';
+import { Patient } from '@/lib/types/patient';
 
 /**
  * Real-time data loading service that replaces the dummy data
@@ -36,6 +38,9 @@ class DataLoaderService {
       
       // Load assistants
       await this.loadAssistants();
+
+      // Load patients
+      await this.loadPatients();
 
       console.log('All real-time data loaded and subscriptions established');
       return true;
@@ -254,6 +259,62 @@ class DataLoaderService {
       this.unsubscribeFunctions.push(unsubscribe);
     } catch (error) {
       console.error('Error loading assistants:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load patients from Firestore with real-time updates
+   */
+  private async loadPatients(): Promise<void> {
+    try {
+      console.log('🔄 Starting to load patients from Firestore...');
+      const patientStore = usePatientStore.getState();
+      
+      // Set up real-time subscription for patients
+      const patientsQuery = query(
+        collection(db, 'patients'),
+        orderBy('createdAt', 'desc')
+      );
+
+      const unsubscribe = onSnapshot(patientsQuery, (snapshot) => {
+        console.log(`📊 Firestore patients snapshot received: ${snapshot.size} documents`);
+        const patients: Patient[] = [];
+        
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          console.log('🏥 Patient data:', { id: doc.id, ...data });
+          patients.push({
+            id: doc.id,
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            dateOfBirth: data.dateOfBirth || '',
+            gender: data.gender || undefined,
+            address: data.address || {},
+            emergencyContact: data.emergencyContact || {},
+            medicalHistory: data.medicalHistory || {},
+            insurance: data.insurance || {},
+            checkInStatus: data.checkInStatus || 'not-checked-in',
+            appointmentId: data.appointmentId || '',
+            doctorId: data.doctorId || '',
+            roomId: data.roomId || '',
+            createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+            updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          });
+        });
+
+        // Update the store with real-time data
+        patientStore.setPatients(patients);
+        console.log(`✅ Real-time patients update: ${patients.length} patients loaded`);
+      }, (error) => {
+        console.error('❌ Error in patients snapshot listener:', error);
+      });
+
+      this.unsubscribeFunctions.push(unsubscribe);
+    } catch (error) {
+      console.error('❌ Error loading patients:', error);
       throw error;
     }
   }

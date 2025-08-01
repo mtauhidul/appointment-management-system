@@ -53,16 +53,37 @@ const Dashboard = () => {
   const { rooms, isLoading: roomsLoading, updateRoomInFirestore } = useRoomStore();
   const { statuses } = useStatusStore();
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🎯 Dashboard Debug - Doctors:', doctors);
-    console.log('🎯 Dashboard Debug - Rooms:', rooms);  
-    console.log('🎯 Dashboard Debug - Statuses:', statuses);
-    console.log('🎯 Dashboard Debug - Loading states:', { doctorsLoading, roomsLoading });
-  }, [doctors, rooms, statuses, doctorsLoading, roomsLoading]);
-
   // Check if we're still loading data
   const isLoading = doctorsLoading || roomsLoading;
+
+  // One-time sync fix for room assignment inconsistency
+  useEffect(() => {
+    const syncRoomAssignments = async () => {
+      if (isLoading || doctors.length === 0 || rooms.length === 0) return;
+      
+      for (const doctor of doctors) {
+        // Find rooms that have this doctor assigned but doctor doesn't know about
+        const roomsAssignedToDoctor = rooms
+          .filter(room => room.doctorsAssigned && room.doctorsAssigned.includes(doctor.id))
+          .map(room => room.id);
+          
+        const currentDoctorRooms = doctor.roomsAssigned || [];
+        
+        // Check if there's a mismatch
+        const needsSync = roomsAssignedToDoctor.length !== currentDoctorRooms.length ||
+          !roomsAssignedToDoctor.every(roomId => currentDoctorRooms.includes(roomId));
+          
+        if (needsSync) {
+          // Update doctor's roomsAssigned in Firestore
+          await updateDoctorInFirestore(doctor.id, {
+            roomsAssigned: roomsAssignedToDoctor
+          });
+        }
+      }
+    };
+    
+    syncRoomAssignments();
+  }, [doctors, rooms, isLoading, updateDoctorInFirestore]);
 
   // Check if we have no data
   const hasNoDoctors = !isLoading && doctors.length === 0;
@@ -367,33 +388,7 @@ const Dashboard = () => {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-4 space-y-6">
-        {/* Debug Info */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm">
-          <h3 className="font-semibold text-yellow-800 mb-2">Debug Info:</h3>
-          <p><strong>Doctors:</strong> {doctors.length} loaded</p>
-          <p><strong>Rooms:</strong> {rooms.length} loaded</p>
-          <p><strong>Statuses:</strong> {statuses.length} loaded</p>
-          <p><strong>Loading:</strong> {isLoading ? 'Yes' : 'No'}</p>
-          {doctors.length > 0 && (
-            <div>
-              <p><strong>Doctor Names:</strong> {doctors.map(d => d.name).join(', ')}</p>
-              {doctors.map(doctor => (
-                <div key={doctor.id} className="mt-2 p-2 bg-white rounded border">
-                  <p><strong>{doctor.name}:</strong></p>
-                  <p>- Rooms Assigned: [{doctor.roomsAssigned.join(', ')}]</p>
-                  <p>- Matching Rooms: {doctor.roomsAssigned.filter(roomId => 
-                    rooms.find(room => room.id === roomId)
-                  ).length} of {doctor.roomsAssigned.length}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          {rooms.length > 0 && (
-            <p><strong>Room IDs:</strong> {rooms.map(r => r.id).join(', ')}</p>
-          )}
-        </div>
-        
+      <div className="container mx-auto p-4 space-y-6">        
         {doctors.map((doctor) => (
           <Card key={doctor.id} className="overflow-hidden">
             <CardHeader className="bg-background p-4 border-b">

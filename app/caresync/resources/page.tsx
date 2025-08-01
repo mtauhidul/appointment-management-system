@@ -45,7 +45,7 @@ const ResourcesSection = () => {
     updateRoomInFirestore,
     deleteRoomFromFirestore
   } = useRoomStore();
-  const { doctors, assignRoom, removeRoomAssignment } = useDoctorStore();
+  const { doctors, assignRoom, removeRoomAssignment, updateDoctorInFirestore } = useDoctorStore();
 
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -130,17 +130,23 @@ const ResourcesSection = () => {
 
       // ✅ Prevent duplicate assignments
       if (!currentRoom.doctorsAssigned.includes(selectedDoctor)) {
-        // Update Firestore
-        const success = await updateRoomInFirestore(roomId, {
+        // Update room document in Firestore
+        const roomUpdateSuccess = await updateRoomInFirestore(roomId, {
           doctorsAssigned: [...currentRoom.doctorsAssigned, selectedDoctor],
         });
         
-        if (success) {
+        // Update doctor document in Firestore
+        const currentDoctor = doctors.find(doc => doc.id === selectedDoctor);
+        const doctorUpdateSuccess = currentDoctor ? await updateDoctorInFirestore(selectedDoctor, {
+          roomsAssigned: [...(currentDoctor.roomsAssigned || []), roomId],
+        }) : false;
+        
+        if (roomUpdateSuccess && doctorUpdateSuccess) {
           assignRoom(selectedDoctor, roomId);
           assignedCount++;
         } else {
           hasErrors = true;
-          console.error(`Failed to assign room ${roomId} to doctor ${selectedDoctor}`);
+          console.error(`Failed to assign room ${roomId} to doctor ${selectedDoctor}. Room update: ${roomUpdateSuccess}, Doctor update: ${doctorUpdateSuccess}`);
         }
       }
     }
