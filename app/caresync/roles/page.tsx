@@ -8,7 +8,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { useAssistantStore } from "@/lib/store/useAssistantStore";
 import { useDoctorStore } from "@/lib/store/useDoctorStore";
 import { useReceptionistStore } from "@/lib/store/useReceptionistStore";
-import { usePatientStore } from "@/lib/store/usePatientStore";
 import {
   ChevronLeft,
   ChevronRight,
@@ -21,11 +20,10 @@ import { useEffect, useState } from "react";
 import AssistantsList from "./assistantsList/assistantsList";
 import DoctorsList from "./doctorsList/doctorsList";
 import ReceptionistsList from "./receptionistsList/receptionistsList";
-import PatientsList from "@/components/patients-list";
 
 const Roles = () => {
   const [activeTab, setActiveTab] = useState<
-    "doctors" | "assistants" | "receptionists" | "patients"
+    "doctors" | "assistants" | "receptionists"
   >("doctors");
 
   // Screen size tracking
@@ -39,7 +37,6 @@ const Roles = () => {
   const { doctors } = useDoctorStore();
   const { assistants } = useAssistantStore();
   const { receptionists } = useReceptionistStore();
-  const { patients } = usePatientStore();
 
   // Track screen size for responsive design
   useEffect(() => {
@@ -79,11 +76,6 @@ const Roles = () => {
       label: "Receptionists",
       icon: <Users className="h-4 w-4" />,
     },
-    {
-      id: "patients",
-      label: "Patients",
-      icon: <UserRound className="h-4 w-4" />,
-    },
   ];
 
   const currentTabIndex = tabs.findIndex((tab) => tab.id === activeTab);
@@ -108,10 +100,10 @@ const Roles = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold flex items-center">
             <LayoutDashboard className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-primary" />
-            <span>Staff & Patient Management</span>
+            <span>Staff Management</span>
           </h1>
           <p className="text-sm text-gray-500 mt-0.5 hidden sm:block">
-            Manage doctors, assistants, receptionists and patients
+            Manage doctors, assistants, and receptionists
           </p>
         </div>
 
@@ -161,13 +153,6 @@ const Roles = () => {
             isActive={activeTab === "receptionists"}
             onClick={() => setActiveTab("receptionists")}
           />
-          <SummaryCard
-            title="Patients"
-            count={patients.length}
-            icon={<UserRound className="h-4 w-4 text-orange-600" />}
-            isActive={activeTab === "patients"}
-            onClick={() => setActiveTab("patients")}
-          />
         </div>
       </div>
 
@@ -176,7 +161,7 @@ const Roles = () => {
       <Tabs
         value={activeTab}
         onValueChange={(value) =>
-          setActiveTab(value as "doctors" | "assistants" | "receptionists" | "patients")
+          setActiveTab(value as "doctors" | "assistants" | "receptionists")
         }
         className="space-y-4"
       >
@@ -196,9 +181,7 @@ const Roles = () => {
                     ? doctors.length
                     : tab.id === "assistants"
                     ? assistants.length
-                    : tab.id === "receptionists"
-                    ? receptionists.length
-                    : patients.length}
+                    : receptionists.length}
                 </span>
               ) : null}
             </TabsTrigger>
@@ -224,13 +207,6 @@ const Roles = () => {
           className="mt-0 sm:mt-2 focus-visible:outline-none"
         >
           <ReceptionistsList />
-        </TabsContent>
-
-        <TabsContent
-          value="patients"
-          className="mt-0 sm:mt-2 focus-visible:outline-none"
-        >
-          <PatientsList />
         </TabsContent>
       </Tabs>
 

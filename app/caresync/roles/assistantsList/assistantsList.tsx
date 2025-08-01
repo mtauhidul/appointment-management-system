@@ -39,12 +39,18 @@ import {
 import { useEffect, useState } from "react";
 
 const AssistantsList = () => {
-  const { assistants, addAssistant, updateAssistant, deleteAssistant } =
-    useAssistantStore();
+  const { 
+    assistants, 
+    isLoading,
+    addAssistantToFirestore,
+    updateAssistantInFirestore,
+    deleteAssistantFromFirestore
+  } = useAssistantStore();
   const { doctors, assignAssistant, removeAssistant } = useDoctorStore();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [selectedAssistant, setSelectedAssistant] = useState<{
     id: string;
     name: string;
@@ -86,7 +92,7 @@ const AssistantsList = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleSaveAssistant = () => {
+  const handleSaveAssistant = async () => {
     if (!newAssistant.name || !newAssistant.email || !newAssistant.phone) {
       toast({
         variant: "destructive",
@@ -96,50 +102,87 @@ const AssistantsList = () => {
       return;
     }
 
-    if (selectedAssistant) {
-      updateAssistant(selectedAssistant.id, {
-        ...newAssistant,
-        doctorsAssigned: newAssistant.doctorsAssigned.filter((id) =>
-          doctors.some((doctor) => doctor.id === id)
-        ), // ✅ Only keep valid doctor IDs
-      });
+    setIsUpdating(true);
 
-      // ✅ Update assistant assignments in doctors
-      doctors.forEach((doctor) => {
-        if (doctor.assistantsAssigned.includes(selectedAssistant.id)) {
-          if (!newAssistant.doctorsAssigned.includes(doctor.id)) {
-            removeAssistant(doctor.id, selectedAssistant.id);
-          }
+    try {
+      if (selectedAssistant) {
+        // Update existing assistant in Firebase
+        const success = await updateAssistantInFirestore(selectedAssistant.id, {
+          name: newAssistant.name,
+          email: newAssistant.email,
+          phone: newAssistant.phone,
+          doctorsAssigned: newAssistant.doctorsAssigned.filter((id) =>
+            doctors.some((doctor) => doctor.id === id)
+          ), // ✅ Only keep valid doctor IDs
+        });
+
+        if (success) {
+          // ✅ Update assistant assignments in doctors
+          doctors.forEach((doctor) => {
+            if (doctor.assistantsAssigned.includes(selectedAssistant.id)) {
+              if (!newAssistant.doctorsAssigned.includes(doctor.id)) {
+                removeAssistant(doctor.id, selectedAssistant.id);
+              }
+            }
+            if (newAssistant.doctorsAssigned.includes(doctor.id)) {
+              assignAssistant(doctor.id, selectedAssistant.id);
+            }
+          });
+
+          toast({
+            title: "Assistant Updated",
+            description: `${newAssistant.name} has been updated.`,
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to update assistant. Please try again.",
+          });
+          return;
         }
-        if (newAssistant.doctorsAssigned.includes(doctor.id)) {
-          assignAssistant(doctor.id, selectedAssistant.id);
+      } else {
+        // Add new assistant to Firebase
+        const assistantData = {
+          name: newAssistant.name,
+          email: newAssistant.email,
+          phone: newAssistant.phone,
+          doctorsAssigned: newAssistant.doctorsAssigned,
+        };
+
+        const success = await addAssistantToFirestore(assistantData);
+
+        if (success) {
+          // ✅ Assign assistant to doctors (we'll need to get the new ID from the real-time update)
+          // The real-time listener will update the store with the new assistant including its ID
+          // We can handle doctor assignments in a useEffect when assistants change
+          
+          toast({
+            title: "Assistant Added",
+            description: `${newAssistant.name} has been added.`,
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to add assistant. Please try again.",
+          });
+          return;
         }
-      });
+      }
 
+      resetForm();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving assistant:', error);
       toast({
-        title: "Assistant Updated",
-        description: `${newAssistant.name} has been updated.`,
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
       });
-    } else {
-      const newAssistantId = Math.random().toString(36).substr(2, 9);
-      addAssistant({
-        id: newAssistantId,
-        ...newAssistant,
-      });
-
-      // ✅ Assign assistant to doctors
-      newAssistant.doctorsAssigned.forEach((doctorId) => {
-        assignAssistant(doctorId, newAssistantId);
-      });
-
-      toast({
-        title: "Assistant Added",
-        description: `${newAssistant.name} has been added.`,
-      });
+    } finally {
+      setIsUpdating(false);
     }
-
-    resetForm();
-    setIsDialogOpen(false);
   };
 
   const resetForm = () => {
@@ -278,22 +321,43 @@ const AssistantsList = () => {
                     Edit
                   </Button>
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       if (
                         confirm(
                           `Are you sure you want to delete ${assistant.name}?`
                         )
                       ) {
-                        deleteAssistant(assistant.id);
-                        toast({
-                          title: "Assistant Deleted",
-                          description: `${assistant.name} has been removed.`,
-                        });
+                        setIsUpdating(true);
+                        try {
+                          const success = await deleteAssistantFromFirestore(assistant.id);
+                          if (success) {
+                            toast({
+                              title: "Assistant Deleted",
+                              description: `${assistant.name} has been removed.`,
+                            });
+                          } else {
+                            toast({
+                              variant: "destructive",
+                              title: "Error",
+                              description: "Failed to delete assistant. Please try again.",
+                            });
+                          }
+                        } catch (error) {
+                          console.error('Error deleting assistant:', error);
+                          toast({
+                            variant: "destructive",
+                            title: "Error",
+                            description: "An unexpected error occurred. Please try again.",
+                          });
+                        } finally {
+                          setIsUpdating(false);
+                        }
                       }
                     }}
                     variant="ghost"
                     size="sm"
                     className="text-red-500 h-8 text-xs sm:text-sm"
+                    disabled={isUpdating}
                   >
                     <Trash2 className="w-3.5 h-3.5 mr-1" />
                     Delete
@@ -455,8 +519,9 @@ const AssistantsList = () => {
             <Button
               onClick={handleSaveAssistant}
               className="w-full sm:w-auto order-1 sm:order-2"
+              disabled={isUpdating || isLoading}
             >
-              {selectedAssistant ? "Save Changes" : "Add Assistant"}
+              {isUpdating ? "Saving..." : selectedAssistant ? "Save Changes" : "Add Assistant"}
             </Button>
           </DialogFooter>
         </DialogContent>

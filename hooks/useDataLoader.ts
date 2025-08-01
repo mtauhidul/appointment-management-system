@@ -9,7 +9,6 @@ import { usePatientStore } from '@/lib/store/usePatientStore';
 import { Doctor } from '@/lib/types/doctor';
 import { Receptionist } from '@/lib/types/receptionist';
 import { Status } from '@/lib/types/status';
-import { Assistant } from '@/lib/types/assistant';
 import { Patient } from '@/lib/types/patient';
 
 /**
@@ -223,42 +222,31 @@ class DataLoaderService {
    */
   private async loadAssistants(): Promise<void> {
     try {
+      console.log('🔄 Starting to load assistants from Firestore...');
       const assistantStore = useAssistantStore.getState();
       
+      // Import the assistant service
+      const assistantService = (await import('@/lib/services/assistant-service')).default;
+      
       // Set up real-time subscription for assistants
-      const assistantsQuery = query(
-        collection(db, 'assistants'),
-        orderBy('name', 'asc')
-      );
-
-      const unsubscribe = onSnapshot(assistantsQuery, (snapshot) => {
-        const assistants: Assistant[] = [];
-        
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          assistants.push({
-            id: doc.id,
-            name: data.name || '',
-            email: data.email || '',
-            phone: data.phone || '',
-            doctorsAssigned: data.doctorsAssigned || [],
+      const unsubscribe = assistantService.setupRealTimeListener(
+        (assistants) => {
+          console.log(`🩺 Assistants data received: ${assistants.length} assistants`);
+          assistants.forEach(assistant => {
+            console.log('🩺 Assistant data:', assistant);
           });
-        });
-
-        // Replace existing assistants with the real ones
-        // First delete all existing assistants
-        const existingAssistants = assistantStore.assistants;
-        existingAssistants.forEach(assistant => assistantStore.deleteAssistant(assistant.id));
-        
-        // Add the real assistants
-        assistants.forEach(assistant => assistantStore.addAssistant(assistant));
-        
-        console.log(`Loaded ${assistants.length} assistants from Firestore`);
-      });
+          // Update the store with real-time data
+          assistantStore.setAssistants(assistants);
+          console.log(`✅ Real-time assistants update: ${assistants.length} assistants loaded`);
+        },
+        (error) => {
+          console.error('❌ Real-time assistants listener error:', error);
+        }
+      );
 
       this.unsubscribeFunctions.push(unsubscribe);
     } catch (error) {
-      console.error('Error loading assistants:', error);
+      console.error('❌ Error loading assistants:', error);
       throw error;
     }
   }
