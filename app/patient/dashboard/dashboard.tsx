@@ -154,7 +154,15 @@ const Dashboard = () => {
 
   // Helper function to get day name from date
   const getDayName = (date: Date): string => {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
     return days[date.getDay()];
   };
 
@@ -218,19 +226,28 @@ const Dashboard = () => {
 
       // Check availability directly from doctor's schedule
       const dayName = getDayName(date);
-      const doctorAvailability: DoctorAvailability = selectedDoctor.availability;
-      
+      const doctorAvailability: DoctorAvailability =
+        selectedDoctor.availability;
+
       // Ensure we have availability data
       if (!doctorAvailability) {
         console.log(`No availability data for doctor: ${selectedDoctor.name}`);
         return true; // Disable if no availability data
       }
-      
-      const daySlots = doctorAvailability[dayName as keyof DoctorAvailability] || [];
-      
+
+      const daySlots =
+        doctorAvailability[dayName as keyof DoctorAvailability] || [];
+
       // Debug logging
-      console.log(`Date: ${date.toDateString()}, Day: ${dayName}, Doctor: ${selectedDoctor.name}, Slots:`, daySlots, 'Available:', daySlots.length > 0);
-      
+      console.log(
+        `Date: ${date.toDateString()}, Day: ${dayName}, Doctor: ${
+          selectedDoctor.name
+        }, Slots:`,
+        daySlots,
+        "Available:",
+        daySlots.length > 0
+      );
+
       // Disable if doctor has no time slots on this day
       return daySlots.length === 0;
     },
@@ -238,24 +255,29 @@ const Dashboard = () => {
   );
 
   // Handle date selection with validation
-  const handleDateSelectWithValidation = useCallback((date: Date | undefined) => {
-    if (!date) {
-      setSelectedDate(null);
-      setSelectedTimeSlot(null);
-      return;
-    }
+  const handleDateSelectWithValidation = useCallback(
+    (date: Date | undefined) => {
+      if (!date) {
+        setSelectedDate(null);
+        setSelectedTimeSlot(null);
+        return;
+      }
 
-    // Check if the selected date is disabled
-    const isDisabled = isDateDisabledSync(date);
-    if (isDisabled) {
-      // Don't allow selection of disabled dates
-      console.log(`Date ${date.toDateString()} is disabled and cannot be selected`);
-      return;
-    }
+      // Check if the selected date is disabled
+      const isDisabled = isDateDisabledSync(date);
+      if (isDisabled) {
+        // Don't allow selection of disabled dates
+        console.log(
+          `Date ${date.toDateString()} is disabled and cannot be selected`
+        );
+        return;
+      }
 
-    setSelectedDate(date);
-    setSelectedTimeSlot(null); // Reset time selection when date changes
-  }, [isDateDisabledSync]);
+      setSelectedDate(date);
+      setSelectedTimeSlot(null); // Reset time selection when date changes
+    },
+    [isDateDisabledSync]
+  );
 
   // Handle appointment submission
   const handleSubmitBooking = async () => {
@@ -312,9 +334,10 @@ const Dashboard = () => {
               : "Video Call",
           status: "scheduled" as const,
           reasonForVisit: reasonForVisit,
-          ...(appointmentType === "in-person" && selectedDoctor.roomsAssigned[0] && {
-            roomId: selectedDoctor.roomsAssigned[0]
-          }),
+          ...(appointmentType === "in-person" &&
+            selectedDoctor.roomsAssigned[0] && {
+              roomId: selectedDoctor.roomsAssigned[0],
+            }),
           ...(bookingNotes && { notes: bookingNotes }),
           ...(symptoms && { symptoms: symptoms }),
         };
@@ -371,8 +394,8 @@ const Dashboard = () => {
   // Format appointment status for display
   const getStatusBadge = (status: PatientAppointment["status"]) => {
     const statusConfig = {
-      scheduled: { label: "Scheduled", variant: "secondary" as const },
-      confirmed: { label: "Confirmed", variant: "default" as const },
+      scheduled: { label: "Scheduled", variant: "default" as const },
+      confirmed: { label: "Confirmed", variant: "secondary" as const },
       "checked-in": { label: "Checked In", variant: "outline" as const },
       "in-progress": { label: "In Progress", variant: "default" as const },
       completed: { label: "Completed", variant: "secondary" as const },
@@ -1044,8 +1067,14 @@ const Dashboard = () => {
                   className="rounded-md border"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
-                  {selectedDoctor 
-                    ? `Only showing days when ${selectedDoctor.name} is available. ${selectedDoctor.availability ? 'Doctor availability loaded.' : 'Loading doctor availability...'}`
+                  {selectedDoctor
+                    ? `Only showing days when ${
+                        selectedDoctor.name
+                      } is available. ${
+                        selectedDoctor.availability
+                          ? "Doctor availability loaded."
+                          : "Loading doctor availability..."
+                      }`
                     : "Note: Weekends are unavailable for appointments"}
                 </p>
               </div>
@@ -1064,7 +1093,10 @@ const Dashboard = () => {
                 </Button>
                 <Button
                   onClick={() => setBookingStep(3)}
-                  disabled={!selectedDate || (selectedDate && isDateDisabledSync(selectedDate))}
+                  disabled={
+                    !selectedDate ||
+                    (selectedDate && isDateDisabledSync(selectedDate))
+                  }
                 >
                   Next
                 </Button>

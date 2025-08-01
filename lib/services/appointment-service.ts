@@ -30,7 +30,7 @@ export interface PatientAppointment {
   location: string;
   roomId?: string;
   status: 'scheduled' | 'confirmed' | 'checked-in' | 'in-progress' | 'completed' | 'cancelled' | 'no-show' | 'rescheduled';
-  notes: string;
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
   originalAppointmentId?: string; // For rescheduled appointments
