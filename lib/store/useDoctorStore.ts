@@ -9,16 +9,21 @@ import { useRoomStore } from "./useRoomStore";
 
 interface DoctorStore {
   doctors: Doctor[];
+  isLoading: boolean;
+  // Local state management (for real-time updates)
   addDoctor: (doctor: Doctor) => void;
   updateDoctor: (id: string, updates: Partial<Doctor>) => void;
   deleteDoctor: (id: string) => void;
+  setDoctors: (doctors: Doctor[]) => void;
+  setLoading: (loading: boolean) => void;
+  // Room and patient assignments (local only)
   assignRoom: (doctorId: string, roomId: string) => void;
   removeRoomAssignment: (doctorId: string, roomId: string) => void;
   assignPatient: (doctorId: string, patientId: string) => void;
   removePatient: (doctorId: string, patientId: string) => void;
   assignAssistant: (doctorId: string, assistantId: string) => void;
   removeAssistant: (doctorId: string, assistantId: string) => void;
-  // New availability methods
+  // Availability methods (local only)
   addTimeSlot: (
     doctorId: string,
     day: keyof DoctorAvailability,
@@ -36,12 +41,23 @@ interface DoctorStore {
     timeSlotId: string
   ) => void;
   setAvailability: (doctorId: string, availability: DoctorAvailability) => void;
+  // Firestore operations
+  addDoctorToFirestore: (doctorData: Omit<Doctor, 'id'>) => Promise<boolean>;
+  updateDoctorInFirestore: (id: string, updates: Partial<Doctor>) => Promise<boolean>;
+  deleteDoctorFromFirestore: (id: string) => Promise<boolean>;
 }
 
 export const useDoctorStore = create<DoctorStore>((set) => ({
   doctors: [],
+  isLoading: false,
 
-  // ✅ Add a new doctor with empty availability
+  // ✅ Set doctors (used by real-time listeners)
+  setDoctors: (doctors) => set({ doctors }),
+  
+  // ✅ Set loading state
+  setLoading: (isLoading) => set({ isLoading }),
+
+  // ✅ Add a new doctor with empty availability (local state only)
   addDoctor: (doctor) =>
     set((state) => ({
       doctors: [
@@ -219,4 +235,69 @@ export const useDoctorStore = create<DoctorStore>((set) => ({
           : doc
       ),
     })),
+
+  // 🔥 REAL FIRESTORE OPERATIONS
+  
+  // ✅ Add doctor to Firestore (this will trigger real-time update)
+  addDoctorToFirestore: async (doctorData) => {
+    set({ isLoading: true });
+    try {
+      const doctorService = (await import('@/lib/services/doctor-service')).default;
+      const result = await doctorService.createDoctor(doctorData);
+      
+      if (result.success) {
+        console.log('Doctor added to Firestore:', result.id);
+        return true;
+      } else {
+        console.error('Failed to add doctor:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error adding doctor to Firestore:', error);
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // ✅ Update doctor in Firestore (this will trigger real-time update)
+  updateDoctorInFirestore: async (id, updates) => {
+    try {
+      const doctorService = (await import('@/lib/services/doctor-service')).default;
+      const result = await doctorService.updateDoctor(id, updates);
+      
+      if (result.success) {
+        console.log('Doctor updated in Firestore:', id);
+        return true;
+      } else {
+        console.error('Failed to update doctor:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error updating doctor in Firestore:', error);
+      return false;
+    }
+  },
+
+  // ✅ Delete doctor from Firestore (this will trigger real-time update)
+  deleteDoctorFromFirestore: async (id) => {
+    set({ isLoading: true });
+    try {
+      const doctorService = (await import('@/lib/services/doctor-service')).default;
+      const result = await doctorService.deleteDoctor(id);
+      
+      if (result.success) {
+        console.log('Doctor deleted from Firestore:', id);
+        return true;
+      } else {
+        console.error('Failed to delete doctor:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error deleting doctor from Firestore:', error);
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 }));

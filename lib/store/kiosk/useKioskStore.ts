@@ -198,25 +198,42 @@ export const useKioskStore = create<KioskState>()(
           try {
             setLoading(true);
             
-            // TODO: Implement API call to submit check-in data
-            // For now, simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Import the kiosk data service
+            const kioskDataService = (await import('@/lib/services/kiosk-data-service')).default;
             
-            console.log('Submitting check-in data:', progress.data);
+            // Submit the check-in data to Firestore
+            const result = await kioskDataService.submitPatientCheckIn(progress.data as PatientCheckInData);
             
-            // Reset after successful submission
-            set({
-              progress: { ...initialState, currentStep: 'complete' },
-              isLoading: false,
-              errors: [],
-              isEditMode: false,
-              returnToStep: null
-            });
-            
-            return true;
+            if (result.success) {
+              console.log('Check-in submitted successfully:', {
+                patientId: result.patientId,
+                encounterId: result.encounterId,
+              });
+              
+              // Reset after successful submission
+              set({
+                progress: { ...initialState, currentStep: 'complete' },
+                isLoading: false,
+                errors: [],
+                isEditMode: false,
+                returnToStep: null
+              });
+              
+              return true;
+            } else {
+              console.error('Check-in submission failed:', result.error);
+              set({
+                errors: [{ field: 'submission', message: result.error || 'Submission failed' }],
+                isLoading: false,
+              });
+              return false;
+            }
           } catch (error) {
             console.error('Error submitting check-in:', error);
             setLoading(false);
+            set({
+              errors: [{ field: 'submission', message: 'Network error occurred' }],
+            });
             return false;
           }
         }

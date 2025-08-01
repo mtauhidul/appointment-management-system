@@ -28,7 +28,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import useLoadDummyData from "@/hooks/useLoadDymmyData";
+import useDataLoader from "@/hooks/useDataLoader";
 
 // Import page components
 import Dashboard from "./dashboard/dashboard";
@@ -44,26 +44,54 @@ function CaresyncContent() {
   const searchParams = useSearchParams();
   const urlSection = searchParams.get("section");
 
-  // Load dummy data for development/demo
-  useLoadDummyData();
+  // Load real-time data from Firestore
+  const { loadData, cleanup } = useDataLoader();
+  
+  useEffect(() => {
+    let isMounted = true;
+    
+    const initializeData = async () => {
+      try {
+        const success = await loadData();
+        if (success && isMounted) {
+          console.log('Real-time data loaded successfully');
+        }
+      } catch (error) {
+        console.error('Error loading real-time data:', error);
+      }
+    };
+    
+    initializeData();
+    
+    // Cleanup subscriptions on unmount
+    return () => {
+      isMounted = false;
+      cleanup();
+    };
+  }, [loadData, cleanup]);
 
-  // Initialize section state from URL or localStorage or default to Dashboard
-  const [section, setSection] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return (
-        urlSection || localStorage.getItem("caresync-section") || "Dashboard"
-      );
-    }
-    return urlSection || "Dashboard";
-  });
+  // Initialize section state - start with URL param or default, then hydrate with localStorage
+  const [section, setSection] = useState<string>(urlSection || "Dashboard");
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Sync section state with localStorage and URL
+  // Hydrate state with localStorage after component mounts
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("caresync-section", section);
+      const savedSection = localStorage.getItem("caresync-section");
+      if (savedSection && !urlSection) {
+        setSection(savedSection);
+      }
+      setIsHydrated(true);
     }
-    router.replace(`?section=${section}`, { scroll: false });
-  }, [section, router]);
+  }, [urlSection]);
+
+  // Sync section state with localStorage and URL after hydration
+  useEffect(() => {
+    if (isHydrated && typeof window !== "undefined") {
+      localStorage.setItem("caresync-section", section);
+      router.replace(`?section=${section}`, { scroll: false });
+    }
+  }, [section, router, isHydrated]);
 
   // Memoize sidebar items to prevent unnecessary re-renders
   const sidebarItems = useMemo(

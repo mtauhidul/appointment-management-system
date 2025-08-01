@@ -24,9 +24,10 @@ import { useEffect, useState } from "react";
 const ReceptionistsList = () => {
   const {
     receptionists,
-    addReceptionist,
-    updateReceptionist,
-    deleteReceptionist,
+    isLoading,
+    addReceptionistToFirestore,
+    updateReceptionistInFirestore,
+    deleteReceptionistFromFirestore,
   } = useReceptionistStore();
   const { toast } = useToast();
 
@@ -70,7 +71,9 @@ const ReceptionistsList = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleSaveReceptionist = () => {
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleSaveReceptionist = async () => {
     if (
       !newReceptionist.name ||
       !newReceptionist.email ||
@@ -84,25 +87,49 @@ const ReceptionistsList = () => {
       return;
     }
 
+    setIsUpdating(true);
+
     if (selectedReceptionist) {
-      updateReceptionist(selectedReceptionist.id, newReceptionist);
-      toast({
-        title: "Receptionist Updated",
-        description: `${newReceptionist.name} has been updated.`,
-      });
+      // Update existing receptionist in Firestore
+      const success = await updateReceptionistInFirestore(selectedReceptionist.id, newReceptionist);
+      
+      if (success) {
+        toast({
+          title: "Receptionist Updated",
+          description: `${newReceptionist.name} has been updated.`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to update receptionist. Please try again.",
+        });
+        setIsUpdating(false);
+        return;
+      }
     } else {
-      addReceptionist({
-        id: Math.random().toString(36).substr(2, 9),
-        ...newReceptionist,
-      });
-      toast({
-        title: "Receptionist Added",
-        description: `${newReceptionist.name} has been added.`,
-      });
+      // Create new receptionist in Firestore
+      const success = await addReceptionistToFirestore(newReceptionist);
+      
+      if (success) {
+        toast({
+          title: "Receptionist Added",
+          description: `${newReceptionist.name} has been added.`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to create receptionist. Please try again.",
+        });
+        setIsUpdating(false);
+        return;
+      }
     }
 
     setIsDialogOpen(false);
     resetForm();
+    setIsUpdating(false);
   };
 
   const resetForm = () => {
@@ -134,7 +161,11 @@ const ReceptionistsList = () => {
         </Button>
       </div>
 
-      {receptionists.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8">
+          <p>Loading receptionists...</p>
+        </div>
+      ) : receptionists.length === 0 ? (
         <div className="text-center py-8 sm:py-12 border border-dashed rounded-lg bg-gray-50">
           <User className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-gray-300 mb-3" />
           <h3 className="text-lg font-medium text-gray-700">
@@ -201,18 +232,26 @@ const ReceptionistsList = () => {
                     Edit
                   </Button>
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       if (
                         confirm(
                           `Are you sure you want to delete ${receptionist.name}?`
                         )
                       ) {
-                        deleteReceptionist(receptionist.id);
-                        toast({
-                          variant: "destructive",
-                          title: "Receptionist Deleted",
-                          description: `${receptionist.name} has been removed.`,
-                        });
+                        const success = await deleteReceptionistFromFirestore(receptionist.id);
+                        
+                        if (success) {
+                          toast({
+                            title: "Receptionist Deleted",
+                            description: `${receptionist.name} has been removed.`,
+                          });
+                        } else {
+                          toast({
+                            variant: "destructive",
+                            title: "Error",
+                            description: "Failed to delete receptionist. Please try again.",
+                          });
+                        }
                       }
                     }}
                     variant="ghost"
@@ -304,8 +343,9 @@ const ReceptionistsList = () => {
             <Button
               onClick={handleSaveReceptionist}
               className="w-full sm:w-auto order-1 sm:order-2"
+              disabled={isUpdating}
             >
-              {selectedReceptionist ? "Save Changes" : "Add Receptionist"}
+              {isUpdating ? (selectedReceptionist ? "Saving..." : "Adding...") : (selectedReceptionist ? "Save Changes" : "Add Receptionist")}
             </Button>
           </DialogFooter>
         </DialogContent>

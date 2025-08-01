@@ -28,6 +28,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -48,9 +49,31 @@ const formatTime = (seconds: number) => {
 };
 
 const Dashboard = () => {
-  const { doctors } = useDoctorStore();
-  const { rooms, updateRoom } = useRoomStore();
+  const { doctors, isLoading: doctorsLoading, updateDoctorInFirestore } = useDoctorStore();
+  const { rooms, isLoading: roomsLoading, updateRoomInFirestore } = useRoomStore();
   const { statuses } = useStatusStore();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🎯 Dashboard Debug - Doctors:', doctors);
+    console.log('🎯 Dashboard Debug - Rooms:', rooms);  
+    console.log('🎯 Dashboard Debug - Statuses:', statuses);
+    console.log('🎯 Dashboard Debug - Loading states:', { doctorsLoading, roomsLoading });
+  }, [doctors, rooms, statuses, doctorsLoading, roomsLoading]);
+
+  // Check if we're still loading data
+  const isLoading = doctorsLoading || roomsLoading;
+
+  // Check if we have no data
+  const hasNoDoctors = !isLoading && doctors.length === 0;
+  const hasNoRooms = !isLoading && rooms.length === 0;
+
+  // Prevent hydration mismatch by ensuring client-side mounting
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Generate status colors map
   const statusColors = statuses.reduce(
@@ -66,8 +89,10 @@ const Dashboard = () => {
     [key: string]: { [doctorId: string]: number };
   }>({});
 
-  // Update timers every second
+  // Update timers every second - only run on client after mounting
   useEffect(() => {
+    if (!isMounted) return;
+
     const interval = setInterval(() => {
       setTimers((prev) => {
         const newTimers = { ...prev };
@@ -96,7 +121,7 @@ const Dashboard = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [rooms]);
+  }, [rooms, isMounted]);
 
   // Audio handlers
   const playNotificationSound = () => {
@@ -110,11 +135,12 @@ const Dashboard = () => {
   };
 
   // Reset specific room for a doctor
-  const handleRoomReset = (roomId: string, doctorId: string) => {
+  const handleRoomReset = async (roomId: string, doctorId: string) => {
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
 
-    updateRoom(roomId, {
+    // Update Firestore
+    const success = await updateRoomInFirestore(roomId, {
       doctorStatuses: {
         ...room.doctorStatuses,
         [doctorId]: {
@@ -124,6 +150,10 @@ const Dashboard = () => {
         },
       },
     });
+
+    if (!success) {
+      console.error('Failed to reset room status');
+    }
   };
 
   // Reset all rooms for a specific doctor
@@ -138,7 +168,7 @@ const Dashboard = () => {
   };
 
   // Update room status for a doctor
-  const handleUpdateStatus = (
+  const handleUpdateStatus = async (
     roomId: string,
     doctorId: string,
     newStatus: string
@@ -158,48 +188,212 @@ const Dashboard = () => {
       },
     };
 
-    updateRoom(roomId, {
-      ...room,
+    // Update Firestore
+    const success = await updateRoomInFirestore(roomId, {
       doctorStatuses: updatedDoctorStatuses,
     });
 
-    // Play sound if status has sound enabled
-    const statusObject = statuses.find((s) => s.name === newStatus);
-    if (statusObject?.hasSound) {
-      playNotificationSound();
+    if (success) {
+      // Play sound if status has sound enabled
+      const statusObject = statuses.find((s) => s.name === newStatus);
+      if (statusObject?.hasSound) {
+        playNotificationSound();
+      }
+    } else {
+      console.error('Failed to update room status');
     }
   };
 
   // Toggle emergency mode for a room
-  const handleToggleEmergency = (roomId: string) => {
+  const handleToggleEmergency = async (roomId: string) => {
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
 
     const newEmergencyState = !room.isEmergency;
-    updateRoom(roomId, { isEmergency: newEmergencyState });
+    
+    // Update Firestore
+    const success = await updateRoomInFirestore(roomId, { 
+      isEmergency: newEmergencyState 
+    });
 
-    // Play emergency sound only when activated
-    if (newEmergencyState) {
-      playEmergencySound();
+    if (success) {
+      // Play emergency sound only when activated
+      if (newEmergencyState) {
+        playEmergencySound();
+      }
+    } else {
+      console.error('Failed to toggle emergency state');
     }
   };
 
   // Update patient count for a doctor
-  const handlePatientCountChange = (doctorId: string, count: number) => {
+  const handlePatientCountChange = async (doctorId: string, count: number) => {
     const doctor = doctors.find((doc) => doc.id === doctorId);
     if (!doctor) return;
 
     const newCount = Math.max(0, doctor.patients.length + count);
-    useDoctorStore.getState().updateDoctor(doctorId, {
-      patients: new Array(newCount)
-        .fill(null)
-        .map((_, i) => `Patient ${i + 1}`),
+    const newPatients = new Array(newCount)
+      .fill(null)
+      .map((_, i) => `Patient ${i + 1}`);
+
+    // Update Firestore
+    const success = await updateDoctorInFirestore(doctorId, {
+      patients: newPatients,
     });
+
+    if (!success) {
+      console.error('Failed to update patient count');
+    }
   };
+
+  // Skeleton loading component for dashboard
+  const DashboardSkeleton = () => (
+    <div className="container mx-auto p-4 space-y-6">
+      {[1, 2, 3].map((i) => (
+        <Card key={i} className="overflow-hidden">
+          <CardHeader className="bg-background p-4 border-b">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div>
+                  <Skeleton className="h-5 w-32 mb-2" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:ml-auto">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-8 w-28" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((j) => (
+                <Card key={j} className="overflow-hidden">
+                  <CardHeader className="py-2 px-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-7 w-7 rounded" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-3">
+                    <Skeleton className="h-8 w-full mb-2" />
+                    <Skeleton className="h-4 w-24 mx-auto" />
+                  </CardContent>
+                  <CardFooter className="p-2 border-t">
+                    <Skeleton className="h-4 w-16 mx-auto" />
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  // Empty state component
+  const EmptyState = () => (
+    <div className="container mx-auto p-4">
+      <div className="text-center py-16 space-y-6">
+        <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
+          <Users className="h-12 w-12 text-gray-400" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold text-gray-900">
+            No Dashboard Data Available
+          </h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            {hasNoDoctors
+              ? "No doctors have been added yet. Add doctors from the Roles section to get started."
+              : hasNoRooms
+              ? "No rooms have been assigned to doctors. Set up rooms from the Resources section."
+              : "Dashboard data is being loaded..."}
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          {hasNoDoctors && (
+            <Button
+              onClick={() => (window.location.href = "/caresync?section=Roles")}
+              className="gap-2"
+            >
+              <Users className="h-4 w-4" />
+              Add Doctors
+            </Button>
+          )}
+          {hasNoRooms && !hasNoDoctors && (
+            <Button
+              onClick={() =>
+                (window.location.href = "/caresync?section=Resources")
+              }
+              className="gap-2"
+            >
+              <DoorOpen className="h-4 w-4" />
+              Set up Rooms
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Early return for loading state
+  if (isLoading) {
+    return (
+      <TooltipProvider>
+        <DashboardSkeleton />
+      </TooltipProvider>
+    );
+  }
+
+  // Early return for empty state
+  if (
+    hasNoDoctors ||
+    (doctors.length > 0 &&
+      doctors.every(
+        (doctor) =>
+          doctor.roomsAssigned.length === 0 ||
+          !doctor.roomsAssigned.some((roomId) =>
+            rooms.find((room) => room.id === roomId)
+          )
+      ))
+  ) {
+    return (
+      <TooltipProvider>
+        <EmptyState />
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>
       <div className="container mx-auto p-4 space-y-6">
+        {/* Debug Info */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm">
+          <h3 className="font-semibold text-yellow-800 mb-2">Debug Info:</h3>
+          <p><strong>Doctors:</strong> {doctors.length} loaded</p>
+          <p><strong>Rooms:</strong> {rooms.length} loaded</p>
+          <p><strong>Statuses:</strong> {statuses.length} loaded</p>
+          <p><strong>Loading:</strong> {isLoading ? 'Yes' : 'No'}</p>
+          {doctors.length > 0 && (
+            <div>
+              <p><strong>Doctor Names:</strong> {doctors.map(d => d.name).join(', ')}</p>
+              {doctors.map(doctor => (
+                <div key={doctor.id} className="mt-2 p-2 bg-white rounded border">
+                  <p><strong>{doctor.name}:</strong></p>
+                  <p>- Rooms Assigned: [{doctor.roomsAssigned.join(', ')}]</p>
+                  <p>- Matching Rooms: {doctor.roomsAssigned.filter(roomId => 
+                    rooms.find(room => room.id === roomId)
+                  ).length} of {doctor.roomsAssigned.length}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {rooms.length > 0 && (
+            <p><strong>Room IDs:</strong> {rooms.map(r => r.id).join(', ')}</p>
+          )}
+        </div>
+        
         {doctors.map((doctor) => (
           <Card key={doctor.id} className="overflow-hidden">
             <CardHeader className="bg-background p-4 border-b">

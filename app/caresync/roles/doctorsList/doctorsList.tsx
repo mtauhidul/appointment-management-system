@@ -76,11 +76,12 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const DoctorsList = () => {
   const {
     doctors,
-    addDoctor,
-    updateDoctor,
-    deleteDoctor,
+    isLoading,
     addTimeSlot,
     removeTimeSlot,
+    addDoctorToFirestore,
+    updateDoctorInFirestore,
+    deleteDoctorFromFirestore,
   } = useDoctorStore();
   const { assistants } = useAssistantStore();
   const { rooms } = useRoomStore();
@@ -120,27 +121,6 @@ const DoctorsList = () => {
     name: string;
   } | null>(null);
 
-  // ✅ Ensure doctors have correct room assignments by using **room IDs**
-  useEffect(() => {
-    if (isUpdating) return;
-    setIsUpdating(true);
-
-    doctors.forEach((doctor) => {
-      const assignedRoomIds = rooms
-        .filter((room) => room.doctorsAssigned.includes(doctor.id))
-        .map((room) => room.id);
-
-      if (
-        JSON.stringify(doctor.roomsAssigned.sort()) !==
-        JSON.stringify(assignedRoomIds.sort())
-      ) {
-        updateDoctor(doctor.id, { roomsAssigned: assignedRoomIds });
-      }
-    });
-
-    setIsUpdating(false);
-  }, [rooms, doctors, updateDoctor, isUpdating]);
-
   // Reset form state when dialog opens
   useEffect(() => {
     if (isDialogOpen) {
@@ -165,7 +145,7 @@ const DoctorsList = () => {
     }
   }, [isAvailabilityDialogOpen, doctorForAvailability, doctors]);
 
-  const handleSaveDoctor = () => {
+  const handleSaveDoctor = async () => {
     if (
       !newDoctor.name ||
       !newDoctor.email ||
@@ -180,28 +160,55 @@ const DoctorsList = () => {
       return;
     }
 
+    setIsUpdating(true);
+
     if (selectedDoctor) {
-      updateDoctor(selectedDoctor.id, {
+      // Update existing doctor in Firestore
+      const success = await updateDoctorInFirestore(selectedDoctor.id, {
         ...newDoctor,
         availability,
       });
-      toast({
-        title: "Doctor Updated",
-        description: `${newDoctor.name} has been updated.`,
-      });
+      
+      if (success) {
+        toast({
+          title: "Doctor Updated",
+          description: `${newDoctor.name} has been updated.`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to update doctor. Please try again.",
+        });
+        setIsUpdating(false);
+        return;
+      }
     } else {
-      addDoctor({
-        id: Math.random().toString(36).substr(2, 9),
+      // Create new doctor in Firestore
+      const doctorData = {
         ...newDoctor,
         roomsAssigned: [],
         assistantsAssigned: [],
         patients: [],
         availability,
-      });
-      toast({
-        title: "Doctor Added",
-        description: `${newDoctor.name} has been added.`,
-      });
+      };
+      
+      const success = await addDoctorToFirestore(doctorData);
+      
+      if (success) {
+        toast({
+          title: "Doctor Added",
+          description: `${newDoctor.name} has been added.`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to create doctor. Please try again.",
+        });
+        setIsUpdating(false);
+        return;
+      }
     }
 
     setIsDialogOpen(false);
@@ -209,6 +216,7 @@ const DoctorsList = () => {
     setNewDoctor({ name: "", email: "", phone: "", specialty: "" });
     setDialogTab("details");
     setAvailability(createEmptyAvailability());
+    setIsUpdating(false);
   };
 
   const handleAddTimeSlot = (day: keyof DoctorAvailability) => {
@@ -498,7 +506,11 @@ const DoctorsList = () => {
         </Button>
       </div>
 
-      {doctors.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8">
+          <p>Loading doctors...</p>
+        </div>
+      ) : doctors.length === 0 ? (
         <div className="text-center py-12 border border-dashed rounded-lg bg-gray-50">
           <Briefcase className="w-12 h-12 mx-auto text-gray-300 mb-3" />
           <h3 className="text-lg font-medium text-gray-700">No Doctors Yet</h3>
@@ -663,17 +675,26 @@ const DoctorsList = () => {
                     Edit
                   </Button>
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       if (
                         confirm(
                           `Are you sure you want to delete ${doctor.name}?`
                         )
                       ) {
-                        deleteDoctor(doctor.id);
-                        toast({
-                          title: "Doctor Deleted",
-                          description: `${doctor.name} has been removed.`,
-                        });
+                        const success = await deleteDoctorFromFirestore(doctor.id);
+                        
+                        if (success) {
+                          toast({
+                            title: "Doctor Deleted",
+                            description: `${doctor.name} has been removed.`,
+                          });
+                        } else {
+                          toast({
+                            variant: "destructive",
+                            title: "Error",
+                            description: "Failed to delete doctor. Please try again.",
+                          });
+                        }
                       }
                     }}
                     variant="ghost"
@@ -806,9 +827,9 @@ const DoctorsList = () => {
                   >
                     Back to Details
                   </Button>
-                  <Button onClick={handleSaveDoctor} className="gap-1">
+                  <Button onClick={handleSaveDoctor} className="gap-1" disabled={isUpdating}>
                     <Check className="w-4 h-4" />
-                    {selectedDoctor ? "Save Changes" : "Add Doctor"}
+                    {isUpdating ? (selectedDoctor ? "Saving..." : "Adding...") : (selectedDoctor ? "Save Changes" : "Add Doctor")}
                   </Button>
                 </div>
               </div>

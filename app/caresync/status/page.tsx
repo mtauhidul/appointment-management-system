@@ -38,7 +38,7 @@ import { useStatusStore } from "@/lib/store/useStatusStore";
 
 const StatusSection = () => {
   const { toast } = useToast();
-  const { statuses, addStatus, updateStatus, deleteStatus } = useStatusStore();
+  const { statuses, addStatusToFirestore, updateStatusInFirestore, deleteStatusFromFirestore, isLoading } = useStatusStore();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
@@ -48,7 +48,6 @@ const StatusSection = () => {
     activityType: "",
     hasSound: false,
   });
-  const [loading, setLoading] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Reset the Dialog to initial state
@@ -61,11 +60,10 @@ const StatusSection = () => {
     });
     setIsEditing(null);
     setIsDialogOpen(false);
-    setLoading(false);
   };
 
   // Save or Update Status with validation
-  const saveStatus = () => {
+  const saveStatus = async () => {
     if (!newStatus.name || !newStatus.color || !newStatus.activityType) {
       toast({
         title: "Missing Information",
@@ -90,52 +88,95 @@ const StatusSection = () => {
       });
       return;
     }
-
-    setLoading(true);
-    setTimeout(() => {
+    
+    try {
+      let success = false;
+      
       if (isEditing) {
-        updateStatus(isEditing, {
+        success = await updateStatusInFirestore(isEditing, {
           ...newStatus,
           color: tinycolor(newStatus.color).toString(),
         });
-        toast({
-          title: "Status Updated",
-          description: `"${newStatus.name}" has been updated successfully.`,
-        });
+        
+        if (success) {
+          toast({
+            title: "Status Updated",
+            description: `"${newStatus.name}" has been updated successfully.`,
+          });
+        } else {
+          toast({
+            title: "Update Failed",
+            description: "Failed to update status. Please try again.",
+            variant: "destructive",
+          });
+        }
       } else {
-        addStatus({
-          id: crypto.randomUUID(),
+        success = await addStatusToFirestore({
           name: newStatus.name,
           color: tinycolor(newStatus.color).toString(),
           activityType: newStatus.activityType,
           hasSound: newStatus.hasSound,
         });
-        toast({
-          title: "Status Created",
-          description: `"${newStatus.name}" has been added successfully.`,
-        });
+        
+        if (success) {
+          toast({
+            title: "Status Created",
+            description: `"${newStatus.name}" has been added successfully.`,
+          });
+        } else {
+          toast({
+            title: "Creation Failed",
+            description: "Failed to create status. Please try again.",
+            variant: "destructive",
+          });
+        }
       }
-      resetDialog();
-    }, 800); // Reduced timeout for better UX
+      
+      if (success) {
+        resetDialog();
+      }
+    } catch (error) {
+      console.error('Error saving status:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle status removal with confirmation
-  const removeStatus = (statusId: string) => {
+  const removeStatus = async (statusId: string) => {
     if (deleteConfirmId !== statusId) {
       setDeleteConfirmId(statusId);
       return;
     }
-
-    setLoading(true);
-    setTimeout(() => {
-      deleteStatus(statusId);
+    
+    try {
+      const success = await deleteStatusFromFirestore(statusId);
+      
+      if (success) {
+        toast({
+          title: "Status Removed",
+          description: "The status has been removed successfully.",
+        });
+        setDeleteConfirmId(null);
+        resetDialog();
+      } else {
+        toast({
+          title: "Deletion Failed",
+          description: "Failed to delete status. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting status:', error);
       toast({
-        title: "Status Removed",
-        description: "The status has been removed successfully.",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
-      setDeleteConfirmId(null);
-      resetDialog();
-    }, 500);
+    }
   };
 
   // Activity type options for rooms
@@ -447,10 +488,10 @@ const StatusSection = () => {
                 </Button>
                 <Button
                   onClick={saveStatus}
-                  disabled={loading}
+                  disabled={isLoading}
                   className="w-full sm:w-auto text-sm"
                 >
-                  {loading
+                  {isLoading
                     ? "Saving..."
                     : isEditing
                     ? "Update Room Status"

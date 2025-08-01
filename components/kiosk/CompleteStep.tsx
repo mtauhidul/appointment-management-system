@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StepComponentProps } from "@/lib/types/kiosk";
 import { CheckCircle, Clock, FileText, Home, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function CompleteStep({ data }: StepComponentProps) {
+  const router = useRouter();
+  
   // Clear any stored data when reaching completion
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -16,7 +19,7 @@ export default function CompleteStep({ data }: StepComponentProps) {
 
   const handleReturnToPortal = () => {
     // Navigate back to the patient portal
-    window.location.href = "/patient?section=Appointments";
+    router.push("/patient?section=Appointments");
   };
 
   const handleStartNewCheckIn = () => {

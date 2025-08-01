@@ -38,7 +38,13 @@ import { useMemo, useState } from "react";
 
 const ResourcesSection = () => {
   const { toast } = useToast();
-  const { rooms, addRoom, updateRoom, deleteRoom } = useRoomStore();
+  const { 
+    rooms, 
+    isLoading: roomsLoading,
+    addRoomToFirestore,
+    updateRoomInFirestore,
+    deleteRoomFromFirestore
+  } = useRoomStore();
   const { doctors, assignRoom, removeRoomAssignment } = useDoctorStore();
 
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
@@ -55,7 +61,7 @@ const ResourcesSection = () => {
   );
 
   // ✅ Handle Room Creation
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     const roomNumber = parseInt(newRoom);
     if (isNaN(roomNumber) || rooms.some((room) => room.number === roomNumber)) {
       toast({
@@ -66,23 +72,32 @@ const ResourcesSection = () => {
       return;
     }
 
-    const newRoomId = `${Date.now()}`; // Generate unique ID
-
-    addRoom({
-      id: newRoomId,
+    // Create room data
+    const roomData = {
       number: roomNumber,
       doctorsAssigned: [], // No doctors assigned by default
-      patientAssigned: undefined,
       doctorStatuses: {},
       isEmergency: false,
-    });
+      // Note: patientAssigned is omitted (undefined fields not allowed in Firestore)
+    };
 
-    setNewRoom("");
-    setIsDialogOpen(false);
-    toast({
-      title: "Success",
-      description: `Room ${roomNumber} created successfully!`,
-    });
+    // Add to Firestore (this will trigger real-time update)
+    const success = await addRoomToFirestore(roomData);
+    
+    if (success) {
+      setNewRoom("");
+      setIsDialogOpen(false);
+      toast({
+        title: "Success",
+        description: `Room ${roomNumber} created successfully!`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to create room. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // ✅ Toggle Room Selection
@@ -95,7 +110,7 @@ const ResourcesSection = () => {
   };
 
   // ✅ Assign Selected Rooms to a Doctor
-  const assignRooms = () => {
+  const assignRooms = async () => {
     if (!selectedDoctor) {
       toast({
         title: "Error",
@@ -107,24 +122,36 @@ const ResourcesSection = () => {
 
     setIsAssigning(true);
     let assignedCount = 0;
+    let hasErrors = false;
 
-    selectedRooms.forEach((roomId) => {
+    for (const roomId of selectedRooms) {
       const currentRoom = rooms.find((room) => room.id === roomId);
-      if (!currentRoom) return;
+      if (!currentRoom) continue;
 
       // ✅ Prevent duplicate assignments
       if (!currentRoom.doctorsAssigned.includes(selectedDoctor)) {
-        updateRoom(roomId, {
-          ...currentRoom,
+        // Update Firestore
+        const success = await updateRoomInFirestore(roomId, {
           doctorsAssigned: [...currentRoom.doctorsAssigned, selectedDoctor],
         });
-
-        assignRoom(selectedDoctor, roomId);
-        assignedCount++;
+        
+        if (success) {
+          assignRoom(selectedDoctor, roomId);
+          assignedCount++;
+        } else {
+          hasErrors = true;
+          console.error(`Failed to assign room ${roomId} to doctor ${selectedDoctor}`);
+        }
       }
-    });
+    }
 
-    if (assignedCount === 0) {
+    if (hasErrors) {
+      toast({
+        title: "Partial Success",
+        description: "Some room assignments failed. Please check and try again.",
+        variant: "destructive",
+      });
+    } else if (assignedCount === 0) {
       toast({
         title: "Info",
         description: "Selected rooms are already assigned to this doctor.",
@@ -148,44 +175,61 @@ const ResourcesSection = () => {
   };
 
   // ✅ Unassign a Doctor from a Room
-  const unassignDoctorFromRoom = (roomId: string, doctorId: string) => {
+  const unassignDoctorFromRoom = async (roomId: string, doctorId: string) => {
     const currentRoom = rooms.find((room) => room.id === roomId);
     if (!currentRoom) return;
 
-    updateRoom(roomId, {
-      ...currentRoom,
+    // Update Firestore
+    const success = await updateRoomInFirestore(roomId, {
       doctorsAssigned: currentRoom.doctorsAssigned.filter(
         (d) => d !== doctorId
       ),
     });
 
-    removeRoomAssignment(doctorId, roomId);
+    if (success) {
+      removeRoomAssignment(doctorId, roomId);
 
-    toast({
-      title: "Success",
-      description: `Dr. ${
-        doctors.find((d) => d.id === doctorId)?.name || "Unknown"
-      } unassigned from Room ${currentRoom.number}.`,
-    });
+      toast({
+        title: "Success",
+        description: `Dr. ${
+          doctors.find((d) => d.id === doctorId)?.name || "Unknown"
+        } unassigned from Room ${currentRoom.number}.`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to unassign doctor. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // ✅ Handle Room Deletion
-  const handleRemoveRoom = (roomId: string) => {
+  const handleRemoveRoom = async (roomId: string) => {
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
 
     if (confirm(`Are you sure you want to remove Room ${room.number}?`)) {
-      deleteRoom(roomId);
+      // Delete from Firestore (this will trigger real-time update)
+      const success = await deleteRoomFromFirestore(roomId);
+      
+      if (success) {
+        // Remove this room from selected rooms if it's there
+        if (selectedRooms.includes(roomId)) {
+          setSelectedRooms((prev) => prev.filter((id) => id !== roomId));
+        }
 
-      // Remove this room from selected rooms if it's there
-      if (selectedRooms.includes(roomId)) {
-        setSelectedRooms((prev) => prev.filter((id) => id !== roomId));
+        toast({
+          title: "Success",
+          description: `Room ${room.number} removed successfully!`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to remove room. Please try again.",
+          variant: "destructive",
+        });
       }
-
-      toast({
-        title: "Success",
-        description: `Room ${room.number} removed successfully!`,
-      });
     }
   };
 
@@ -544,9 +588,9 @@ const ResourcesSection = () => {
               <Button
                 onClick={handleCreateRoom}
                 className="w-full sm:w-auto order-1 sm:order-2"
-                disabled={!newRoom || isNaN(parseInt(newRoom))}
+                disabled={!newRoom || isNaN(parseInt(newRoom)) || roomsLoading}
               >
-                Create Room
+                {roomsLoading ? "Creating..." : "Create Room"}
               </Button>
             </DialogFooter>
           </DialogContent>

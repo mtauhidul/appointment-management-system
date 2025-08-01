@@ -1,6 +1,5 @@
 import {
   CalendarIcon,
-  CheckCircle2,
   Clock,
   FileEdit,
   PlusCircle,
@@ -8,8 +7,10 @@ import {
   UserIcon,
   VideoIcon,
   X,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,279 +33,291 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 
-// Mock patient data
+// Real-time imports
+import { appointmentService, PatientAppointment, AvailableSlot } from '@/lib/services/appointment-service';
+import { Doctor } from '@/lib/types/doctor';
+import { useToast } from '@/hooks/use-toast';
+
+// Real patient data (in production, this would come from authentication)
 const patientData = {
   name: "Roger Curtis",
   id: "208898786",
-};
-
-// Mock provider data
-const providers = [
-  {
-    id: 1,
-    name: "Dr. Sarah Johnson",
-    specialty: "Podiatry",
-    image: "/assets/images/providers/dr-johnson.jpg",
-    available: true,
-  },
-  {
-    id: 2,
-    name: "Dr. Michael Chen",
-    specialty: "Foot & Ankle Surgery",
-    image: "/assets/images/providers/dr-chen.jpg",
-    available: true,
-  },
-  {
-    id: 3,
-    name: "Dr. Emily Rodriguez",
-    specialty: "Diabetic Foot Care",
-    image: "/assets/images/providers/dr-rodriguez.jpg",
-    available: true,
-  },
-  {
-    id: 4,
-    name: "Dr. David Patel",
-    specialty: "Sports Medicine",
-    image: "/assets/images/providers/dr-patel.jpg",
-    available: false,
-  },
-];
-
-// Mock appointment data
-type Appointment = {
-  id: string;
-  provider: string;
-  providerId: number;
-  specialty: string;
-  date: Date;
-  time: string;
-  type: string;
-  location: string;
-  status: string;
-  notes: string;
-  originalDate: Date | null;
-  originalTime: string | null;
-};
-
-const initialAppointments: Appointment[] = [
-  {
-    id: "APT-23089",
-    provider: "Dr. Sarah Johnson",
-    providerId: 1,
-    specialty: "Podiatry",
-    date: new Date(2025, 4, 22),
-    time: "10:30 AM",
-    type: "In-person",
-    location: "Main Office",
-    status: "confirmed",
-    notes: "Follow-up for previous treatment",
-    originalDate: null,
-    originalTime: null,
-  },
-  {
-    id: "APT-23412",
-    provider: "Dr. Michael Chen",
-    providerId: 2,
-    specialty: "Foot & Ankle Surgery",
-    date: new Date(2025, 5, 5),
-    time: "2:15 PM",
-    type: "Virtual",
-    location: "Video Call",
-    status: "confirmed",
-    notes: "Pre-surgical consultation",
-    originalDate: null,
-    originalTime: null,
-  },
-];
-
-// Available time slots for selected date
-const getTimeSlots = (
-  providerId: number,
-  date: Date
-): string[] => {
-  // In a real app, this would come from an API based on provider availability
-  // Adding some variety to simulate real provider schedules
-  let slots = [
-    "9:00 AM",
-    "9:30 AM",
-    "10:00 AM",
-    "10:30 AM",
-    "11:00 AM",
-    "1:00 PM",
-    "1:30 PM",
-    "2:00 PM",
-    "2:30 PM",
-    "3:00 PM",
-  ];
-  // This is just a simple simulation
-  const dateNum = date.getDate();
-  const providerNum = providerId;
-
-  // Remove some slots based on the date and provider combo
-  if ((dateNum + providerNum) % 3 === 0)
-    slots = slots.filter((_, i) => i % 3 !== 0);
-  if ((dateNum + providerNum) % 2 === 0)
-    slots = slots.filter((_, i) => i % 4 !== 1);
-
-  return slots;
+  email: "roger.curtis@email.com",
+  phone: "+1-555-0123",
 };
 
 const Dashboard = () => {
-  const [appointments, setAppointments] = useState(initialAppointments);
+  // Real-time state management
+  const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Booking dialog state
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
   const [appointmentDetailsOpen, setAppointmentDetailsOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<PatientAppointment | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
 
-  // Booking state
-  const [selectedProvider, setSelectedProvider] = useState<number | null>(null);
+  // Booking form state
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [appointmentType, setAppointmentType] = useState("In-person");
-  const [bookingNotes, setBookingNotes] = useState("");
-  const [bookingReference, setBookingReference] = useState("");
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [appointmentType, setAppointmentType] = useState<'in-person' | 'virtual'>('in-person');
+  const [reasonForVisit, setReasonForVisit] = useState('');
+  const [symptoms, setSymptoms] = useState('');
+  const [bookingNotes, setBookingNotes] = useState('');
 
-  // Time slots for selected date
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  // Available slots state
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
-  // Load appointments from localStorage if available
+  // Load initial data and set up real-time subscriptions
   useEffect(() => {
-    const savedAppointments = localStorage.getItem("ytfcsAppointments");
-    if (savedAppointments) {
+    const initializeData = async () => {
       try {
-        const parsed = JSON.parse(savedAppointments, (key, value) => {
-          if (key === "date" || key === "originalDate") {
-            return value ? new Date(value) : null;
+        setLoading(true);
+        
+        // Load available doctors
+        const availableDoctors = await appointmentService.getAvailableDoctors();
+        setDoctors(availableDoctors);
+
+        // Set up real-time appointment subscription for this patient
+        const unsubscribe = appointmentService.subscribeToAppointments(
+          { patientId: patientData.id },
+          (updatedAppointments) => {
+            setAppointments(updatedAppointments);
+            setLoading(false);
           }
-          return value;
-        });
-        setAppointments(parsed);
-      } catch (error) {
-        console.error("Error parsing saved appointments:", error);
+        );
+
+        // Cleanup subscription on unmount
+        return () => {
+          unsubscribe();
+          appointmentService.cleanup();
+        };
+      } catch (err) {
+        console.error('Error initializing data:', err);
+        setError('Failed to load appointments. Please refresh the page.');
+        setLoading(false);
       }
-    }
+    };
+
+    initializeData();
   }, []);
 
-  // Save appointments to localStorage when they change
+  // Load available time slots when doctor and date are selected
   useEffect(() => {
-    localStorage.setItem("ytfcsAppointments", JSON.stringify(appointments));
-  }, [appointments]);
+    const loadTimeSlots = async () => {
+      if (!selectedDoctor || !selectedDate) {
+        setAvailableSlots([]);
+        return;
+      }
 
-  // Reset booking flow
-  const resetBooking = () => {
+      try {
+        setLoadingSlots(true);
+        const slots = await appointmentService.getAvailableSlots(
+          selectedDoctor.id,
+          selectedDate,
+          30 // 30-minute appointments
+        );
+        setAvailableSlots(slots);
+      } catch (err) {
+        console.error('Error loading time slots:', err);
+        toast({
+          title: "Error",
+          description: "Failed to load available time slots. Please try again.",
+          variant: "destructive",
+        });
+        setAvailableSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    loadTimeSlots();
+  }, [selectedDoctor, selectedDate, toast]);
+
+  // Reset booking form
+  const resetBooking = useCallback(() => {
     setBookingStep(1);
-    setSelectedProvider(null);
+    setSelectedDoctor(null);
     setSelectedDate(null);
-    setSelectedTime(null);
-    setAppointmentType("In-person");
-    setBookingNotes("");
-    setBookingReference("");
-  };
+    setSelectedTimeSlot(null);
+    setAppointmentType('in-person');
+    setReasonForVisit('');
+    setSymptoms('');
+    setBookingNotes('');
+    setAvailableSlots([]);
+  }, []);
 
   // Close booking dialog
-  const handleCloseBooking = () => {
+  const handleCloseBooking = useCallback(() => {
     setBookingOpen(false);
     resetBooking();
     setIsRescheduling(false);
-  };
+  }, [resetBooking]);
 
   // Start rescheduling process
-  const handleStartReschedule = (appointment: Appointment) => {
+  const handleStartReschedule = useCallback((appointment: PatientAppointment) => {
     setIsRescheduling(true);
     setSelectedAppointment(appointment);
-    setSelectedProvider(appointment.providerId);
+    
+    // Find the doctor
+    const doctor = doctors.find(d => d.id === appointment.doctorId);
+    if (doctor) {
+      setSelectedDoctor(doctor);
+    }
+    
     setAppointmentType(appointment.type);
-    setBookingNotes(appointment.notes || "");
+    setReasonForVisit(appointment.reasonForVisit || '');
+    setSymptoms(appointment.symptoms || '');
+    setBookingNotes(appointment.notes || '');
     setAppointmentDetailsOpen(false);
     setBookingStep(2); // Start at date selection
     setBookingOpen(true);
-  };
+  }, [doctors]);
 
   // Handle date selection
-  interface HandleDateSelect {
-    (date: Date | undefined): void;
-  }
-
-  const handleDateSelect: HandleDateSelect = (date) => {
-    setSelectedDate(date ?? null);
-
-    // Get available time slots for the selected date and provider
-    if (date && selectedProvider) {
-      setAvailableTimeSlots(getTimeSlots(selectedProvider, date));
-    } else {
-      setAvailableTimeSlots([]);
-    }
-  };
+  const handleDateSelect = useCallback((date: Date | undefined) => {
+    setSelectedDate(date || null);
+    setSelectedTimeSlot(null); // Reset time selection when date changes
+  }, []);
 
   // Handle appointment submission
-  const handleSubmitBooking = () => {
-    if (isRescheduling && selectedAppointment) {
-      // For rescheduling, update the existing appointment
-      const updatedAppointments = appointments.map((apt) => {
-        if (apt.id === selectedAppointment.id) {
-          return {
-            ...apt,
-            date: selectedDate as Date,
-            time: selectedTime as string,
-            type: appointmentType,
-            location:
-              appointmentType === "In-person" ? "Main Office" : "Video Call",
-            status: "rescheduled",
-            notes: bookingNotes,
-            originalDate: apt.originalDate || apt.date,
-            originalTime: apt.originalTime || apt.time,
-          };
-        }
-        return apt;
+  const handleSubmitBooking = async () => {
+    if (!selectedDoctor || !selectedDate || !selectedTimeSlot || !reasonForVisit.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
       });
+      return;
+    }
 
-      setAppointments(updatedAppointments);
-      setBookingReference(selectedAppointment.id);
-    } else {
-      // Generate a booking reference for new appointments
-      const reference = `APT-${Math.floor(10000 + Math.random() * 90000)}`;
-      setBookingReference(reference);
+    try {
+      setLoading(true);
 
-      // Add the new appointment to the list
-      const providerObj = providers.find((p) => p.id === selectedProvider);
-      if (selectedProvider !== null && selectedDate && selectedTime) {
-        const newAppointment: Appointment = {
-          id: reference,
-          provider: providerObj ? providerObj.name : "",
-          providerId: selectedProvider,
-          specialty: providerObj ? providerObj.specialty : "",
+      if (isRescheduling && selectedAppointment) {
+        // Reschedule existing appointment
+        await appointmentService.rescheduleAppointment(
+          selectedAppointment.id,
+          selectedDoctor.id,
+          selectedDate,
+          selectedTimeSlot,
+          `Rescheduled by patient. ${bookingNotes}`.trim()
+        );
+
+        toast({
+          title: "Appointment Rescheduled",
+          description: `Your appointment with ${selectedDoctor.name} has been rescheduled to ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot}.`,
+        });
+      } else {
+        // Create new appointment
+        const appointmentData = {
+          patientId: patientData.id,
+          patientName: patientData.name,
+          patientEmail: patientData.email,
+          patientPhone: patientData.phone,
+          doctorId: selectedDoctor.id,
+          doctorName: selectedDoctor.name,
+          doctorSpecialty: selectedDoctor.specialty,
           date: selectedDate,
-          time: selectedTime,
-          type: appointmentType as "In-person" | "Virtual",
-          location:
-            appointmentType === "In-person" ? "Main Office" : "Video Call",
-          status: "confirmed",
+          timeSlot: selectedTimeSlot,
+          duration: 30,
+          type: appointmentType,
+          location: appointmentType === 'in-person' ? `Room ${selectedDoctor.roomsAssigned[0] || 'TBD'}` : 'Video Call',
+          roomId: appointmentType === 'in-person' ? selectedDoctor.roomsAssigned[0] : undefined,
+          status: 'scheduled' as const,
           notes: bookingNotes,
-          originalDate: null,
-          originalTime: null,
+          reasonForVisit: reasonForVisit,
+          symptoms: symptoms || undefined,
         };
-        setAppointments([...appointments, newAppointment]);
+
+        await appointmentService.createAppointment(appointmentData);
+
+        toast({
+          title: "Appointment Booked",
+          description: `Your appointment with ${selectedDoctor.name} has been scheduled for ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot}.`,
+        });
       }
-    }
 
-    setBookingStep(5); // Move to confirmation step
+      handleCloseBooking();
+    } catch (err) {
+      console.error('Error submitting appointment:', err);
+      toast({
+        title: "Booking Failed",
+        description: err instanceof Error ? err.message : "Failed to book appointment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Cancel an appointment
-  const handleCancelAppointment = (appointmentId: string) => {
-    if (confirm("Are you sure you want to cancel this appointment?")) {
-      setAppointments(appointments.filter((apt) => apt.id !== appointmentId));
+  // Handle appointment cancellation
+  const handleCancelAppointment = async (appointmentId: string, reason?: string) => {
+    try {
+      await appointmentService.cancelAppointment(appointmentId, reason);
       setAppointmentDetailsOpen(false);
+      
+      toast({
+        title: "Appointment Cancelled",
+        description: "Your appointment has been cancelled successfully.",
+      });
+    } catch (err) {
+      console.error('Error cancelling appointment:', err);
+      toast({
+        title: "Cancellation Failed",
+        description: "Failed to cancel appointment. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  // Show appointment details
-  const handleShowAppointmentDetails = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setAppointmentDetailsOpen(true);
+  // Format appointment status for display
+  const getStatusBadge = (status: PatientAppointment['status']) => {
+    const statusConfig = {
+      scheduled: { label: "Scheduled", variant: "secondary" as const },
+      confirmed: { label: "Confirmed", variant: "default" as const },
+      "checked-in": { label: "Checked In", variant: "outline" as const },
+      "in-progress": { label: "In Progress", variant: "default" as const },
+      completed: { label: "Completed", variant: "secondary" as const },
+      cancelled: { label: "Cancelled", variant: "destructive" as const },
+      "no-show": { label: "No Show", variant: "destructive" as const },
+      rescheduled: { label: "Rescheduled", variant: "outline" as const },
+    };
+
+    const config = statusConfig[status] || statusConfig.scheduled;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
+
+  // Show loading state
+  if (loading && appointments.length === 0) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="mt-2 text-muted-foreground">Loading appointments...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Alert className="m-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
 
   // Format date for display
   const formatDate = (
@@ -333,6 +346,12 @@ const Dashboard = () => {
     }
   };
 
+  // Show appointment details
+  const handleShowAppointmentDetails = (appointment: PatientAppointment) => {
+    setSelectedAppointment(appointment);
+    setAppointmentDetailsOpen(true);
+  };
+
   // Sort appointments by date
   const sortedAppointments = [...appointments].sort((a, b) => {
     const dateA = new Date(a.date);
@@ -341,7 +360,7 @@ const Dashboard = () => {
   });
 
   // Check if an appointment is in the past
-  const isAppointmentPast = (appointment: Appointment) => {
+  const isAppointmentPast = (appointment: PatientAppointment) => {
     const today = new Date();
     const appointmentDate = new Date(appointment.date);
     appointmentDate.setHours(23, 59, 59);
@@ -430,15 +449,15 @@ const Dashboard = () => {
                     <div className="flex gap-3 items-start">
                       <div
                         className={`p-2 rounded-full ${
-                          appointment.type === "Virtual"
+                          appointment.type === "virtual"
                             ? "bg-blue-100"
                             : "bg-green-100"
                         }`}
                       >
-                        {appointment.type === "Virtual" ? (
+                        {appointment.type === "virtual" ? (
                           <VideoIcon
                             className={`h-5 w-5 ${
-                              appointment.type === "Virtual"
+                              appointment.type === "virtual"
                                 ? "text-blue-600"
                                 : "text-green-600"
                             }`}
@@ -446,9 +465,9 @@ const Dashboard = () => {
                         ) : (
                           <UserIcon
                             className={`h-5 w-5 ${
-                              appointment.type === "Virtual"
-                                ? "text-blue-600"
-                                : "text-green-600"
+                              appointment.type === "in-person"
+                                ? "text-green-600"
+                                : "text-blue-600"
                             }`}
                           />
                         )}
@@ -456,19 +475,12 @@ const Dashboard = () => {
                       <div>
                         <div className="flex gap-2 items-center flex-wrap">
                           <h3 className="font-semibold">
-                            {appointment.provider}
+                            {appointment.doctorName}
                           </h3>
                           <Badge variant="outline" className="text-xs">
-                            {appointment.specialty}
+                            {appointment.doctorSpecialty}
                           </Badge>
-                          {appointment.status === "rescheduled" && (
-                            <Badge
-                              variant="outline"
-                              className="bg-blue-50 text-blue-700 border-blue-200 text-xs"
-                            >
-                              Rescheduled
-                            </Badge>
-                          )}
+                          {getStatusBadge(appointment.status)}
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
                           <div className="flex items-center gap-1">
@@ -479,18 +491,18 @@ const Dashboard = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
-                            <span>{appointment.time}</span>
+                            <span>{appointment.timeSlot}</span>
                           </div>
                         </div>
                         <div className="text-xs mt-1 flex items-center gap-1">
                           <span
                             className={`${
-                              appointment.type === "Virtual"
+                              appointment.type === "virtual"
                                 ? "text-blue-600"
                                 : "text-green-600"
                             } font-medium`}
                           >
-                            {appointment.type}
+                            {appointment.type === "virtual" ? "Virtual" : "In-person"}
                           </span>
                           <span className="text-muted-foreground">
                             • {appointment.location}
@@ -527,7 +539,7 @@ const Dashboard = () => {
                         </Tooltip>
                       </TooltipProvider>
 
-                      {appointment.type === "Virtual" && (
+                      {appointment.type === "virtual" && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -593,7 +605,7 @@ const Dashboard = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex gap-3 items-start">
                       <div className="p-2 rounded-full bg-muted">
-                        {appointment.type === "Virtual" ? (
+                        {appointment.type === "virtual" ? (
                           <VideoIcon className="h-5 w-5 text-muted-foreground" />
                         ) : (
                           <UserIcon className="h-5 w-5 text-muted-foreground" />
@@ -602,13 +614,13 @@ const Dashboard = () => {
                       <div>
                         <div className="flex gap-2 items-center">
                           <h3 className="font-medium">
-                            {appointment.provider}
+                            {appointment.doctorName}
                           </h3>
                           <Badge
                             variant="outline"
                             className="text-xs text-muted-foreground"
                           >
-                            {appointment.specialty}
+                            {appointment.doctorSpecialty}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
@@ -620,7 +632,7 @@ const Dashboard = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
-                            <span>{appointment.time}</span>
+                            <span>{appointment.timeSlot}</span>
                           </div>
                         </div>
                       </div>
@@ -669,15 +681,15 @@ const Dashboard = () => {
                 <div className="flex items-center gap-3">
                   <div
                     className={`p-3 rounded-full ${
-                      selectedAppointment.type === "Virtual"
+                      selectedAppointment.type === "virtual"
                         ? "bg-blue-100"
                         : "bg-green-100"
                     }`}
                   >
-                    {selectedAppointment.type === "Virtual" ? (
+                    {selectedAppointment.type === "virtual" ? (
                       <VideoIcon
                         className={`h-6 w-6 ${
-                          selectedAppointment.type === "Virtual"
+                          selectedAppointment.type === "virtual"
                             ? "text-blue-600"
                             : "text-green-600"
                         }`}
@@ -685,19 +697,19 @@ const Dashboard = () => {
                     ) : (
                       <UserIcon
                         className={`h-6 w-6 ${
-                          selectedAppointment.type === "Virtual"
-                            ? "text-blue-600"
-                            : "text-green-600"
+                          selectedAppointment.type === "in-person"
+                            ? "text-green-600"
+                            : "text-blue-600"
                         }`}
                       />
                     )}
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">
-                      {selectedAppointment.provider}
+                      {selectedAppointment.doctorName}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {selectedAppointment.specialty}
+                      {selectedAppointment.doctorSpecialty}
                     </p>
                   </div>
                 </div>
@@ -751,32 +763,19 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedAppointment.time}</span>
+                        <span>{selectedAppointment.timeSlot}</span>
                       </div>
                     </div>
                   </div>
 
-                  {selectedAppointment.status === "rescheduled" &&
-                    selectedAppointment.originalDate && (
+                  {selectedAppointment.originalAppointmentId && (
                       <div>
                         <Label className="text-xs text-muted-foreground">
-                          Original Appointment
+                          Rescheduled Appointment
                         </Label>
-                        <div className="mt-1 flex flex-col gap-1.5">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CalendarIcon className="h-4 w-4" />
-                            <span>
-                              {formatDate(
-                                selectedAppointment.originalDate,
-                                "medium"
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>{selectedAppointment.originalTime}</span>
-                          </div>
-                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          This appointment has been rescheduled from a previous booking.
+                        </p>
                       </div>
                     )}
 
@@ -804,7 +803,7 @@ const Dashboard = () => {
 
               {!isAppointmentPast(selectedAppointment) && (
                 <DialogFooter className="flex gap-2">
-                  {selectedAppointment.type === "Virtual" && (
+                  {selectedAppointment.type === "virtual" && (
                     <Button className="gap-2 flex-1">
                       <VideoIcon className="h-4 w-4" />
                       Join Video Call
@@ -869,34 +868,30 @@ const Dashboard = () => {
                 <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-muted-foreground">
                   {formatDate(selectedAppointment.date, "medium")} at{" "}
-                  {selectedAppointment.time}
+                  {selectedAppointment.timeSlot}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-1 text-sm">
                 <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>{selectedAppointment.provider}</span>
+                <span>{selectedAppointment.doctorName}</span>
               </div>
             </div>
           )}
 
-          {/* Step 1: Provider Selection */}
+          {/* Step 1: Doctor Selection */}
           {bookingStep === 1 && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
-                {providers.map((provider) => (
+                {doctors.map((doctor) => (
                   <div
-                    key={provider.id}
+                    key={doctor.id}
                     className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                      selectedProvider === provider.id
+                      selectedDoctor?.id === doctor.id
                         ? "border-primary bg-primary/5"
-                        : provider.available
-                        ? "hover:border-primary"
-                        : "opacity-50 cursor-not-allowed"
+                        : "hover:border-primary"
                     }`}
                     onClick={() => {
-                      if (provider.available) {
-                        setSelectedProvider(provider.id);
-                      }
+                      setSelectedDoctor(doctor);
                     }}
                   >
                     <div className="flex items-center gap-3">
@@ -904,15 +899,18 @@ const Dashboard = () => {
                         <UserIcon className="h-6 w-6 text-muted-foreground" />
                       </div>
                       <div>
-                        <h3 className="font-medium">{provider.name}</h3>
+                        <h3 className="font-medium">{doctor.name}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {provider.specialty}
+                          {doctor.specialty}
                         </p>
-                        {!provider.available && (
-                          <Badge variant="outline" className="mt-1 text-xs">
-                            Unavailable
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {doctor.specialty}
                           </Badge>
-                        )}
+                          <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                            Available
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -924,7 +922,7 @@ const Dashboard = () => {
                 </Button>
                 <Button
                   onClick={() => setBookingStep(2)}
-                  disabled={!selectedProvider}
+                  disabled={!selectedDoctor}
                 >
                   Next
                 </Button>
@@ -938,9 +936,9 @@ const Dashboard = () => {
               <div className="py-4 flex flex-col items-center">
                 {!isRescheduling && (
                   <p className="text-sm text-muted-foreground mb-2">
-                    Selected Provider:{" "}
+                    Selected Doctor:{" "}
                     <span className="font-medium text-foreground">
-                      {providers.find((p) => p.id === selectedProvider)?.name}
+                      {selectedDoctor?.name}
                     </span>
                   </p>
                 )}
@@ -1009,12 +1007,12 @@ const Dashboard = () => {
                     <div className="flex gap-2">
                       <Button
                         variant={
-                          appointmentType === "In-person"
+                          appointmentType === "in-person"
                             ? "default"
                             : "outline"
                         }
                         size="sm"
-                        onClick={() => setAppointmentType("In-person")}
+                        onClick={() => setAppointmentType("in-person")}
                         className="gap-2 flex-1"
                       >
                         <UserIcon className="h-4 w-4" />
@@ -1022,10 +1020,10 @@ const Dashboard = () => {
                       </Button>
                       <Button
                         variant={
-                          appointmentType === "Virtual" ? "default" : "outline"
+                          appointmentType === "virtual" ? "default" : "outline"
                         }
                         size="sm"
-                        onClick={() => setAppointmentType("Virtual")}
+                        onClick={() => setAppointmentType("virtual")}
                         className="gap-2 flex-1"
                       >
                         <VideoIcon className="h-4 w-4" />
@@ -1038,20 +1036,27 @@ const Dashboard = () => {
                 <h3 className="text-sm font-medium mb-2">
                   Available Time Slots
                 </h3>
-                {availableTimeSlots.length === 0 ? (
+                {loadingSlots ? (
+                  <div className="text-center py-4">
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mt-2">Loading available slots...</p>
+                  </div>
+                ) : availableSlots.filter(slot => slot.available).length === 0 ? (
                   <div className="text-center text-muted-foreground py-4 bg-muted/20 rounded-md border border-dashed">
                     No available time slots for selected date
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
-                    {availableTimeSlots.map((time) => (
+                    {availableSlots
+                      .filter(slot => slot.available)
+                      .map((slot) => (
                       <Button
-                        key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
+                        key={slot.timeSlot}
+                        variant={selectedTimeSlot === slot.timeSlot ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setSelectedTime(time)}
+                        onClick={() => setSelectedTimeSlot(slot.timeSlot)}
                       >
-                        {time}
+                        {slot.timeSlot}
                       </Button>
                     ))}
                   </div>
@@ -1063,7 +1068,7 @@ const Dashboard = () => {
                 </Button>
                 <Button
                   onClick={() => setBookingStep(4)}
-                  disabled={!selectedTime}
+                  disabled={!selectedTimeSlot}
                 >
                   Next
                 </Button>
@@ -1080,13 +1085,10 @@ const Dashboard = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">
-                        Provider:
+                        Doctor:
                       </span>
                       <span className="text-sm font-medium">
-                        {isRescheduling && selectedAppointment
-                          ? selectedAppointment.provider
-                          : providers.find((p) => p.id === selectedProvider)
-                              ?.name}
+                        {selectedDoctor?.name}
                       </span>
                     </div>
                     <Separator />
@@ -1095,10 +1097,7 @@ const Dashboard = () => {
                         Specialty:
                       </span>
                       <span className="text-sm">
-                        {isRescheduling && selectedAppointment
-                          ? selectedAppointment.specialty
-                          : providers.find((p) => p.id === selectedProvider)
-                              ?.specialty}
+                        {selectedDoctor?.specialty}
                       </span>
                     </div>
                     <Separator />
@@ -1120,7 +1119,7 @@ const Dashboard = () => {
                       <span className="text-sm text-muted-foreground">
                         Time:
                       </span>
-                      <span className="text-sm">{selectedTime}</span>
+                      <span className="text-sm">{selectedTimeSlot}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">
@@ -1139,7 +1138,7 @@ const Dashboard = () => {
                           </span>
                           <span className="text-sm text-muted-foreground">
                             {formatDate(selectedAppointment.date, "short")} at{" "}
-                            {selectedAppointment.time}
+                            {selectedAppointment.timeSlot}
                           </span>
                         </div>
                       </>
@@ -1147,17 +1146,41 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {!isRescheduling && (
+                {/* Form fields for appointment details */}
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Additional Notes (optional)</Label>
+                    <Label htmlFor="reason">Reason for Visit *</Label>
                     <Input
-                      id="notes"
-                      placeholder="Add any specific concerns or questions for your provider"
-                      value={bookingNotes}
-                      onChange={(e) => setBookingNotes(e.target.value)}
+                      id="reason"
+                      placeholder="e.g., Annual checkup, consultation, follow-up"
+                      value={reasonForVisit}
+                      onChange={(e) => setReasonForVisit(e.target.value)}
+                      required
                     />
                   </div>
-                )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="symptoms">Symptoms (optional)</Label>
+                    <Textarea
+                      id="symptoms"
+                      placeholder="Describe any symptoms you're experiencing"
+                      value={symptoms}
+                      onChange={(e) => setSymptoms(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Additional Notes (optional)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Any specific concerns or questions for your provider"
+                      value={bookingNotes}
+                      onChange={(e) => setBookingNotes(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </div>
 
                 <div className="text-xs text-muted-foreground">
                   By confirming this appointment, you agree to our
@@ -1175,74 +1198,6 @@ const Dashboard = () => {
                   {isRescheduling
                     ? "Confirm Reschedule"
                     : "Confirm Appointment"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-
-          {/* Step 5: Confirmation */}
-          {bookingStep === 5 && (
-            <>
-              <div className="py-6 flex flex-col items-center">
-                <div className="mb-4 bg-green-100 text-green-700 p-4 rounded-full">
-                  <CheckCircle2 className="h-12 w-12" />
-                </div>
-                <h3 className="text-xl font-semibold text-center mb-2">
-                  {isRescheduling
-                    ? "Appointment Rescheduled!"
-                    : "Appointment Confirmed!"}
-                </h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  {isRescheduling
-                    ? "Your appointment has been successfully rescheduled"
-                    : "Your appointment has been successfully scheduled"}
-                </p>
-
-                <div className="bg-muted/20 p-4 rounded-lg border w-full mb-4">
-                  <p className="text-sm text-center mb-2">
-                    Your booking reference
-                  </p>
-                  <p className="text-lg font-bold text-center">
-                    {bookingReference}
-                  </p>
-                </div>
-
-                <div className="space-y-2 text-sm w-full max-w-xs mx-auto">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Provider:</span>
-                    <span className="font-medium">
-                      {isRescheduling && selectedAppointment
-                        ? selectedAppointment.provider
-                        : providers.find((p) => p.id === selectedProvider)
-                            ?.name}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date & Time:</span>
-                    <span>
-                      {selectedDate?.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                      , {selectedTime}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Type:</span>
-                    <span>{appointmentType}</span>
-                  </div>
-                </div>
-
-                <div className="mt-6 w-full">
-                  <p className="text-xs text-muted-foreground text-center mb-2">
-                    A confirmation email has been sent to your registered email
-                    address
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleCloseBooking} className="w-full">
-                  Close
                 </Button>
               </DialogFooter>
             </>
