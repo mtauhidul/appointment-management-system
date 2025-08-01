@@ -1,6 +1,6 @@
 // Simple Firestore connection test
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from './lib/firebase/config.js';
+import { db } from './lib/firebase/config.ts';
 
 async function testFirestoreConnection() {
   try {

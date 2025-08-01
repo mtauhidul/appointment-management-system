@@ -178,7 +178,12 @@ class AppointmentService {
         status: 'scheduled' as const
       };
 
-      const docRef = await addDoc(this.appointmentsCollection, appointmentToCreate);
+      // Remove undefined fields as Firestore doesn't accept them
+      const cleanedAppointmentData = Object.fromEntries(
+        Object.entries(appointmentToCreate).filter(([, value]) => value !== undefined)
+      );
+
+      const docRef = await addDoc(this.appointmentsCollection, cleanedAppointmentData);
       
       // Return the created appointment
       const createdAppointment: PatientAppointment = {
@@ -436,6 +441,29 @@ class AppointmentService {
   private getDayName(date: Date): string {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     return days[date.getDay()];
+  }
+
+  /**
+   * Check if a doctor is available on a specific date
+   */
+  async isDoctorAvailableOnDate(doctorId: string, date: Date): Promise<boolean> {
+    try {
+      // Get doctor data
+      const doctorDoc = await getDoc(doc(db, 'doctors', doctorId));
+      if (!doctorDoc.exists()) {
+        return false;
+      }
+
+      const doctor = { id: doctorDoc.id, ...doctorDoc.data() } as Doctor;
+      const dayName = this.getDayName(date);
+      const daySlots = doctor.availability[dayName as keyof DoctorAvailability] || [];
+
+      // Doctor is available if they have at least one time slot on this day
+      return daySlots.length > 0;
+    } catch (error) {
+      console.error('Error checking doctor availability for date:', error);
+      return false;
+    }
   }
 
   /**

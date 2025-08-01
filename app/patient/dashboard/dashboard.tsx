@@ -1,17 +1,20 @@
+"use client";
+
 import {
+  AlertCircle,
   CalendarIcon,
   Clock,
   FileEdit,
+  Loader2,
   PlusCircle,
   RefreshCw,
   UserIcon,
   VideoIcon,
   X,
-  AlertCircle,
-  Loader2,
 } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,19 +30,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Textarea } from "@/components/ui/textarea";
 
 // Real-time imports
-import { appointmentService, PatientAppointment, AvailableSlot } from '@/lib/services/appointment-service';
-import { Doctor } from '@/lib/types/doctor';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from "@/hooks/use-toast";
+import {
+  appointmentService,
+  AvailableSlot,
+  PatientAppointment,
+} from "@/lib/services/appointment-service";
+import { Doctor, DoctorAvailability } from "@/lib/types/doctor";
 
 // Real patient data (in production, this would come from authentication)
 const patientData = {
@@ -61,17 +67,20 @@ const Dashboard = () => {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
   const [appointmentDetailsOpen, setAppointmentDetailsOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<PatientAppointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<PatientAppointment | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
 
   // Booking form state
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [appointmentType, setAppointmentType] = useState<'in-person' | 'virtual'>('in-person');
-  const [reasonForVisit, setReasonForVisit] = useState('');
-  const [symptoms, setSymptoms] = useState('');
-  const [bookingNotes, setBookingNotes] = useState('');
+  const [appointmentType, setAppointmentType] = useState<
+    "in-person" | "virtual"
+  >("in-person");
+  const [reasonForVisit, setReasonForVisit] = useState("");
+  const [symptoms, setSymptoms] = useState("");
+  const [bookingNotes, setBookingNotes] = useState("");
 
   // Available slots state
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
@@ -82,7 +91,7 @@ const Dashboard = () => {
     const initializeData = async () => {
       try {
         setLoading(true);
-        
+
         // Load available doctors
         const availableDoctors = await appointmentService.getAvailableDoctors();
         setDoctors(availableDoctors);
@@ -102,8 +111,8 @@ const Dashboard = () => {
           appointmentService.cleanup();
         };
       } catch (err) {
-        console.error('Error initializing data:', err);
-        setError('Failed to load appointments. Please refresh the page.');
+        console.error("Error initializing data:", err);
+        setError("Failed to load appointments. Please refresh the page.");
         setLoading(false);
       }
     };
@@ -128,7 +137,7 @@ const Dashboard = () => {
         );
         setAvailableSlots(slots);
       } catch (err) {
-        console.error('Error loading time slots:', err);
+        console.error("Error loading time slots:", err);
         toast({
           title: "Error",
           description: "Failed to load available time slots. Please try again.",
@@ -143,16 +152,22 @@ const Dashboard = () => {
     loadTimeSlots();
   }, [selectedDoctor, selectedDate, toast]);
 
+  // Helper function to get day name from date
+  const getDayName = (date: Date): string => {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return days[date.getDay()];
+  };
+
   // Reset booking form
   const resetBooking = useCallback(() => {
     setBookingStep(1);
     setSelectedDoctor(null);
     setSelectedDate(null);
     setSelectedTimeSlot(null);
-    setAppointmentType('in-person');
-    setReasonForVisit('');
-    setSymptoms('');
-    setBookingNotes('');
+    setAppointmentType("in-person");
+    setReasonForVisit("");
+    setSymptoms("");
+    setBookingNotes("");
     setAvailableSlots([]);
   }, []);
 
@@ -164,34 +179,92 @@ const Dashboard = () => {
   }, [resetBooking]);
 
   // Start rescheduling process
-  const handleStartReschedule = useCallback((appointment: PatientAppointment) => {
-    setIsRescheduling(true);
-    setSelectedAppointment(appointment);
-    
-    // Find the doctor
-    const doctor = doctors.find(d => d.id === appointment.doctorId);
-    if (doctor) {
-      setSelectedDoctor(doctor);
-    }
-    
-    setAppointmentType(appointment.type);
-    setReasonForVisit(appointment.reasonForVisit || '');
-    setSymptoms(appointment.symptoms || '');
-    setBookingNotes(appointment.notes || '');
-    setAppointmentDetailsOpen(false);
-    setBookingStep(2); // Start at date selection
-    setBookingOpen(true);
-  }, [doctors]);
+  const handleStartReschedule = useCallback(
+    (appointment: PatientAppointment) => {
+      setIsRescheduling(true);
+      setSelectedAppointment(appointment);
 
-  // Handle date selection
-  const handleDateSelect = useCallback((date: Date | undefined) => {
-    setSelectedDate(date || null);
+      // Find the doctor
+      const doctor = doctors.find((d) => d.id === appointment.doctorId);
+      if (doctor) {
+        setSelectedDoctor(doctor);
+      }
+
+      setAppointmentType(appointment.type);
+      setReasonForVisit(appointment.reasonForVisit || "");
+      setSymptoms(appointment.symptoms || "");
+      setBookingNotes(appointment.notes || "");
+      setAppointmentDetailsOpen(false);
+      setBookingStep(2); // Start at date selection
+      setBookingOpen(true);
+    },
+    [doctors]
+  );
+
+  // Synchronous date disabled check for Calendar component
+  const isDateDisabledSync = useCallback(
+    (date: Date): boolean => {
+      // Always disable past dates
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (date < today) {
+        return true;
+      }
+
+      // If no doctor is selected, only disable weekends
+      if (!selectedDoctor) {
+        return date.getDay() === 0 || date.getDay() === 6; // Disable weekends
+      }
+
+      // Check availability directly from doctor's schedule
+      const dayName = getDayName(date);
+      const doctorAvailability: DoctorAvailability = selectedDoctor.availability;
+      
+      // Ensure we have availability data
+      if (!doctorAvailability) {
+        console.log(`No availability data for doctor: ${selectedDoctor.name}`);
+        return true; // Disable if no availability data
+      }
+      
+      const daySlots = doctorAvailability[dayName as keyof DoctorAvailability] || [];
+      
+      // Debug logging
+      console.log(`Date: ${date.toDateString()}, Day: ${dayName}, Doctor: ${selectedDoctor.name}, Slots:`, daySlots, 'Available:', daySlots.length > 0);
+      
+      // Disable if doctor has no time slots on this day
+      return daySlots.length === 0;
+    },
+    [selectedDoctor]
+  );
+
+  // Handle date selection with validation
+  const handleDateSelectWithValidation = useCallback((date: Date | undefined) => {
+    if (!date) {
+      setSelectedDate(null);
+      setSelectedTimeSlot(null);
+      return;
+    }
+
+    // Check if the selected date is disabled
+    const isDisabled = isDateDisabledSync(date);
+    if (isDisabled) {
+      // Don't allow selection of disabled dates
+      console.log(`Date ${date.toDateString()} is disabled and cannot be selected`);
+      return;
+    }
+
+    setSelectedDate(date);
     setSelectedTimeSlot(null); // Reset time selection when date changes
-  }, []);
+  }, [isDateDisabledSync]);
 
   // Handle appointment submission
   const handleSubmitBooking = async () => {
-    if (!selectedDoctor || !selectedDate || !selectedTimeSlot || !reasonForVisit.trim()) {
+    if (
+      !selectedDoctor ||
+      !selectedDate ||
+      !selectedTimeSlot ||
+      !reasonForVisit.trim()
+    ) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -215,10 +288,12 @@ const Dashboard = () => {
 
         toast({
           title: "Appointment Rescheduled",
-          description: `Your appointment with ${selectedDoctor.name} has been rescheduled to ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot}.`,
+          description: `Your appointment with ${
+            selectedDoctor.name
+          } has been rescheduled to ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot}.`,
         });
       } else {
-        // Create new appointment
+        // Create new appointment - only include fields that have values
         const appointmentData = {
           patientId: patientData.id,
           patientName: patientData.name,
@@ -231,28 +306,38 @@ const Dashboard = () => {
           timeSlot: selectedTimeSlot,
           duration: 30,
           type: appointmentType,
-          location: appointmentType === 'in-person' ? `Room ${selectedDoctor.roomsAssigned[0] || 'TBD'}` : 'Video Call',
-          roomId: appointmentType === 'in-person' ? selectedDoctor.roomsAssigned[0] : undefined,
-          status: 'scheduled' as const,
-          notes: bookingNotes,
+          location:
+            appointmentType === "in-person"
+              ? `Room ${selectedDoctor.roomsAssigned[0] || "TBD"}`
+              : "Video Call",
+          status: "scheduled" as const,
           reasonForVisit: reasonForVisit,
-          symptoms: symptoms || undefined,
+          ...(appointmentType === "in-person" && selectedDoctor.roomsAssigned[0] && {
+            roomId: selectedDoctor.roomsAssigned[0]
+          }),
+          ...(bookingNotes && { notes: bookingNotes }),
+          ...(symptoms && { symptoms: symptoms }),
         };
 
         await appointmentService.createAppointment(appointmentData);
 
         toast({
           title: "Appointment Booked",
-          description: `Your appointment with ${selectedDoctor.name} has been scheduled for ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot}.`,
+          description: `Your appointment with ${
+            selectedDoctor.name
+          } has been scheduled for ${selectedDate.toLocaleDateString()} at ${selectedTimeSlot}.`,
         });
       }
 
       handleCloseBooking();
     } catch (err) {
-      console.error('Error submitting appointment:', err);
+      console.error("Error submitting appointment:", err);
       toast({
         title: "Booking Failed",
-        description: err instanceof Error ? err.message : "Failed to book appointment. Please try again.",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to book appointment. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -261,17 +346,20 @@ const Dashboard = () => {
   };
 
   // Handle appointment cancellation
-  const handleCancelAppointment = async (appointmentId: string, reason?: string) => {
+  const handleCancelAppointment = async (
+    appointmentId: string,
+    reason?: string
+  ) => {
     try {
       await appointmentService.cancelAppointment(appointmentId, reason);
       setAppointmentDetailsOpen(false);
-      
+
       toast({
         title: "Appointment Cancelled",
         description: "Your appointment has been cancelled successfully.",
       });
     } catch (err) {
-      console.error('Error cancelling appointment:', err);
+      console.error("Error cancelling appointment:", err);
       toast({
         title: "Cancellation Failed",
         description: "Failed to cancel appointment. Please try again.",
@@ -281,7 +369,7 @@ const Dashboard = () => {
   };
 
   // Format appointment status for display
-  const getStatusBadge = (status: PatientAppointment['status']) => {
+  const getStatusBadge = (status: PatientAppointment["status"]) => {
     const statusConfig = {
       scheduled: { label: "Scheduled", variant: "secondary" as const },
       confirmed: { label: "Confirmed", variant: "default" as const },
@@ -502,7 +590,9 @@ const Dashboard = () => {
                                 : "text-green-600"
                             } font-medium`}
                           >
-                            {appointment.type === "virtual" ? "Virtual" : "In-person"}
+                            {appointment.type === "virtual"
+                              ? "Virtual"
+                              : "In-person"}
                           </span>
                           <span className="text-muted-foreground">
                             • {appointment.location}
@@ -769,15 +859,16 @@ const Dashboard = () => {
                   </div>
 
                   {selectedAppointment.originalAppointmentId && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Rescheduled Appointment
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          This appointment has been rescheduled from a previous booking.
-                        </p>
-                      </div>
-                    )}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        Rescheduled Appointment
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        This appointment has been rescheduled from a previous
+                        booking.
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <Label className="text-xs text-muted-foreground">
@@ -907,7 +998,10 @@ const Dashboard = () => {
                           <Badge variant="outline" className="text-xs">
                             {doctor.specialty}
                           </Badge>
-                          <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                          <Badge
+                            variant="default"
+                            className="text-xs bg-green-100 text-green-800"
+                          >
                             Available
                           </Badge>
                         </div>
@@ -945,19 +1039,14 @@ const Dashboard = () => {
                 <Calendar
                   mode="single"
                   selected={selectedDate ?? undefined}
-                  onSelect={handleDateSelect}
-                  disabled={(date) => {
-                    // Disable dates in the past and weekends
-                    return (
-                      date < new Date() ||
-                      date.getDay() === 0 ||
-                      date.getDay() === 6
-                    );
-                  }}
+                  onSelect={handleDateSelectWithValidation}
+                  disabled={isDateDisabledSync}
                   className="rounded-md border"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
-                  Note: Weekends are unavailable for appointments
+                  {selectedDoctor 
+                    ? `Only showing days when ${selectedDoctor.name} is available. ${selectedDoctor.availability ? 'Doctor availability loaded.' : 'Loading doctor availability...'}`
+                    : "Note: Weekends are unavailable for appointments"}
                 </p>
               </div>
               <DialogFooter>
@@ -975,7 +1064,7 @@ const Dashboard = () => {
                 </Button>
                 <Button
                   onClick={() => setBookingStep(3)}
-                  disabled={!selectedDate}
+                  disabled={!selectedDate || (selectedDate && isDateDisabledSync(selectedDate))}
                 >
                   Next
                 </Button>
@@ -1039,26 +1128,33 @@ const Dashboard = () => {
                 {loadingSlots ? (
                   <div className="text-center py-4">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mt-2">Loading available slots...</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Loading available slots...
+                    </p>
                   </div>
-                ) : availableSlots.filter(slot => slot.available).length === 0 ? (
+                ) : availableSlots.filter((slot) => slot.available).length ===
+                  0 ? (
                   <div className="text-center text-muted-foreground py-4 bg-muted/20 rounded-md border border-dashed">
                     No available time slots for selected date
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {availableSlots
-                      .filter(slot => slot.available)
+                      .filter((slot) => slot.available)
                       .map((slot) => (
-                      <Button
-                        key={slot.timeSlot}
-                        variant={selectedTimeSlot === slot.timeSlot ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedTimeSlot(slot.timeSlot)}
-                      >
-                        {slot.timeSlot}
-                      </Button>
-                    ))}
+                        <Button
+                          key={slot.timeSlot}
+                          variant={
+                            selectedTimeSlot === slot.timeSlot
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() => setSelectedTimeSlot(slot.timeSlot)}
+                        >
+                          {slot.timeSlot}
+                        </Button>
+                      ))}
                   </div>
                 )}
               </div>
@@ -1158,7 +1254,7 @@ const Dashboard = () => {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="symptoms">Symptoms (optional)</Label>
                     <Textarea
