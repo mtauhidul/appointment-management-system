@@ -15,11 +15,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, SquareUser, Text } from "lucide-react";
+import { LayoutDashboard, SquareUser } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Dashboard from "./dashboard/dashboard";
-import Kiosk from "./kiosk/kiosk-dashboard";
 import Profile from "./profile/profile";
 
 function PatientContent() {
@@ -28,6 +27,10 @@ function PatientContent() {
   const urlSection = searchParams.get("section");
 
   const [section, setSection] = useState<string>(() => {
+    // If URL section is Kiosk, default to Appointments
+    if (urlSection === "Kiosk") {
+      return "Appointments";
+    }
     return urlSection || "Appointments";
   });
 
@@ -35,8 +38,11 @@ function PatientContent() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedSection = localStorage.getItem("patient-section");
-      if (!urlSection && savedSection) {
+      if (!urlSection && savedSection && savedSection !== "Kiosk") {
         setSection(savedSection);
+      } else if (savedSection === "Kiosk") {
+        // If saved section was Kiosk, default to Appointments
+        setSection("Appointments");
       }
     }
   }, [urlSection]);
@@ -52,7 +58,6 @@ function PatientContent() {
     () => [
       { title: "Appointments", icon: LayoutDashboard },
       { title: "Profile", icon: SquareUser },
-      { title: "Kiosk", icon: Text },
     ],
     []
   );
@@ -60,7 +65,6 @@ function PatientContent() {
   const componentMapping: { [key: string]: JSX.Element } = {
     Appointments: <Dashboard />,
     Profile: <Profile />,
-    Kiosk: <Kiosk />,
   };
 
   return (
