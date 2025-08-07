@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Bell, BellOff, Pencil, Trash } from "lucide-react";
+import { AlertCircle, Bell, BellOff, Clock, Pencil, Play, Trash, Users } from "lucide-react";
 import { useState } from "react";
 import { SketchPicker } from "react-color";
 import tinycolor from "tinycolor2";
@@ -47,6 +47,9 @@ const StatusSection = () => {
     color: "#dddddd",
     activityType: "",
     hasSound: false,
+    isStartTrigger: false,
+    isEndTrigger: false,
+    isQueueTrigger: false,
   });
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
@@ -57,6 +60,9 @@ const StatusSection = () => {
       color: "#dddddd",
       activityType: "",
       hasSound: false,
+      isStartTrigger: false,
+      isEndTrigger: false,
+      isQueueTrigger: false,
     });
     setIsEditing(null);
     setIsDialogOpen(false);
@@ -278,6 +284,9 @@ const StatusSection = () => {
                                 setNewStatus({
                                   ...status,
                                   hasSound: status.hasSound ?? false,
+                                  isStartTrigger: status.isStartTrigger ?? false,
+                                  isEndTrigger: status.isEndTrigger ?? false,
+                                  isQueueTrigger: status.isQueueTrigger ?? false,
                                 });
                                 setIsDialogOpen(true);
                               }}
@@ -347,6 +356,30 @@ const StatusSection = () => {
                           {status.color}
                         </span>
                       </div>
+
+                      {/* Patient Flow Triggers */}
+                      {(status.isStartTrigger || status.isEndTrigger || status.isQueueTrigger) && (
+                        <div className="flex flex-wrap items-center gap-1 mt-2 pt-2 border-t border-muted">
+                          {status.isStartTrigger && (
+                            <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-md">
+                              <Play className="h-3 w-3 mr-1" />
+                              Start Timer
+                            </div>
+                          )}
+                          {status.isEndTrigger && (
+                            <div className="flex items-center text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">
+                              <Clock className="h-3 w-3 mr-1" />
+                              End Timer
+                            </div>
+                          )}
+                          {status.isQueueTrigger && (
+                            <div className="flex items-center text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                              <Users className="h-3 w-3 mr-1" />
+                              Next Patient
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -475,6 +508,84 @@ const StatusSection = () => {
                       setNewStatus({ ...newStatus, hasSound: checked })
                     }
                   />
+                </div>
+
+                {/* Trigger Configuration Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Patient Flow Triggers
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Configure what happens when this status is assigned to a room
+                    </p>
+                  </div>
+
+                  {/* Start Timer Trigger */}
+                  <div className="flex items-center justify-between space-x-2">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="startTrigger"
+                        className="text-xs sm:text-sm font-medium"
+                      >
+                        ⏱️ Start Timer
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Begin timing when patient enters room with this status
+                      </p>
+                    </div>
+                    <Switch
+                      id="startTrigger"
+                      checked={newStatus.isStartTrigger}
+                      onCheckedChange={(checked) =>
+                        setNewStatus({ ...newStatus, isStartTrigger: checked })
+                      }
+                    />
+                  </div>
+
+                  {/* End Timer Trigger */}
+                  <div className="flex items-center justify-between space-x-2">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="endTrigger"
+                        className="text-xs sm:text-sm font-medium"
+                      >
+                        ⏹️ End Timer
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Stop timing when room gets this status
+                      </p>
+                    </div>
+                    <Switch
+                      id="endTrigger"
+                      checked={newStatus.isEndTrigger}
+                      onCheckedChange={(checked) =>
+                        setNewStatus({ ...newStatus, isEndTrigger: checked })
+                      }
+                    />
+                  </div>
+
+                  {/* Queue Trigger */}
+                  <div className="flex items-center justify-between space-x-2">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="queueTrigger"
+                        className="text-xs sm:text-sm font-medium"
+                      >
+                        👥 Queue Next Patient
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Move next patient from queue into room with this status
+                      </p>
+                    </div>
+                    <Switch
+                      id="queueTrigger"
+                      checked={newStatus.isQueueTrigger}
+                      onCheckedChange={(checked) =>
+                        setNewStatus({ ...newStatus, isQueueTrigger: checked })
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 

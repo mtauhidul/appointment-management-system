@@ -124,6 +124,10 @@ class RealStatusService {
               color: data.color || '#000000',
               activityType: data.activityType || 'general',
               hasSound: data.hasSound || false,
+              // Trigger configuration fields
+              isStartTrigger: data.isStartTrigger || false,
+              isEndTrigger: data.isEndTrigger || false,
+              isQueueTrigger: data.isQueueTrigger || false,
             });
           });
 

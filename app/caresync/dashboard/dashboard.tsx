@@ -40,6 +40,7 @@ import { PopoverClose } from "@radix-ui/react-popover";
 import { useDoctorStore } from "@/lib/store/useDoctorStore";
 import { useRoomStore } from "@/lib/store/useRoomStore";
 import { useStatusStore } from "@/lib/store/useStatusStore";
+import RoleBasedNavigation from "@/components/RoleBasedNavigation";
 
 // Helper to format time in MM:SS
 const formatTime = (seconds: number) => {
@@ -388,7 +389,10 @@ const Dashboard = () => {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-4 space-y-6">        
+      <div className="container mx-auto p-4 space-y-6">
+        {/* Role-based navigation */}
+        <RoleBasedNavigation />
+        
         {doctors.map((doctor) => (
           <Card key={doctor.id} className="overflow-hidden">
             <CardHeader className="bg-background p-4 border-b">
